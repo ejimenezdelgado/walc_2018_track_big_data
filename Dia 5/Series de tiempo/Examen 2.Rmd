@@ -1,0 +1,364 @@
+---
+title: "Examen 2"
+author: "Efrén Jiménez"
+date: "7 de diciembre de 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Pregunta 1
+
+Árbol de Decisión.
+Red Neuronal.
+Bosque Aleatorio.
+Serie de Tiempo.
+Aprendizaje en Conjunto.
+Agrupamiento Jerárquico.
+Agrupamiento por Particionamiento.
+Matriz Documento – Términos.
+Segmentación o Tokenización (“Tokenization”).
+Autoregresión.
+
+## Pregunta 2
+
+### Análisis del Problema
+### Entendimiento de los Datos
+### Exploración de los Datos
+```{r}
+#librerías utilizadas
+library(caTools)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(lattice)
+library(neuralnet)
+library(ROCR)
+library(pROC)
+library(randomForest)
+
+
+setwd('D:\\Drive\\Universidad\\Cenfotec\\MBD\\2016 Cuatrimestre 3\\MBD-305 Minería de datos 1\\Semana 13')
+
+datos <- read.csv('dermatology.csv',na.strings = "?")
+colnames(datos) <- c("erythema","scaling","definite","itching","koebner","polygonal","follicular","oral","knee","scalp","family","melanin","eosinophils","PNL","fibrosis","exocytosis","acanthosis","hyperkeratosis","parakeratosis","clubbing","elongation","thinning","spongiform","munro","focal","disappearance","vacuolisation","spongiosis","saw","follicular","perifollicular","inflammatory","band","Age","unknown")
+
+
+datos$erythema=factor(datos$erythema)
+datos$scaling=factor(datos$scaling)
+datos$definite=factor(datos$definite)
+datos$itching=factor(datos$itching)
+datos$koebner=factor(datos$koebner)
+datos$polygonal=factor(datos$polygonal)
+datos$follicular=factor(datos$follicular)
+datos$oral=factor(datos$oral)
+datos$knee=factor(datos$knee)
+datos$scalp=factor(datos$scalp)
+datos$family=factor(datos$family)
+datos$melanin=factor(datos$melanin)
+datos$eosinophils=factor(datos$eosinophils)
+datos$PNL=factor(datos$PNL)
+datos$fibrosis=factor(datos$fibrosis)
+datos$exocytosis=factor(datos$exocytosis)
+datos$acanthosis=factor(datos$acanthosis)
+datos$hyperkeratosis=factor(datos$hyperkeratosis)
+datos$parakeratosis=factor(datos$parakeratosis)
+datos$clubbing=factor(datos$clubbing)
+datos$elongation=factor(datos$elongation)
+datos$thinning=factor(datos$thinning)
+datos$spongiform=factor(datos$spongiform)
+datos$munro=factor(datos$munro)
+datos$focal=factor(datos$focal)
+datos$disappearance=factor(datos$disappearance)
+datos$vacuolisation=factor(datos$vacuolisation)
+datos$spongiosis=factor(datos$spongiosis)
+datos$saw=factor(datos$saw)
+datos$follicular=factor(datos$follicular)
+datos$perifollicular=factor(datos$perifollicular)
+datos$inflammatory=factor(datos$inflammatory)
+datos$band=factor(datos$band)
+
+str(datos)
+
+
+#dividir el conjunto de datos en entrenamiento y prueba
+set.seed(1234)
+splt <- sample.split(datos$family, SplitRatio = 0.7)
+entrenamiento <- datos[splt, ]
+prueba <- datos[!splt, ]
+
+summary(entrenamiento)
+
+summary(prueba)
+
+```
+
+```{r}
+
+barplot(table(entrenamiento$family),
+main = 'Distribución de Observaciones por historial familiar',
+ylab = 'Observaciones',
+xlab = 'Historial familiar')
+
+```
+
+```{r}
+boxplot(Age ~ family,
+data = entrenamiento,
+main = 'Distribución de edades por historial familiar',
+xlab = 'Historial familiar (0 No o 1 Si)',
+ylab = 'Edades')
+
+```
+
+```{r}
+
+mosaicplot(~entrenamiento$family + entrenamiento$inflammatory,
+main = 'Proporción de historial familiar por el nivel inflamatorio',
+ylab = 'Nivel inflamatorio',
+xlab = 'Historial familiar (0 = No)')
+```
+
+```{r}
+mosaicplot(~entrenamiento$family + entrenamiento$hyperkeratosis,
+main = 'Proporción de historial familiar por el nivel hiperqueratosis',
+ylab = 'Nivel hiperqueratosis',
+xlab = 'Historial familiar (0 = No)')
+```
+
+### Creación del Modelo
+
+En este caso, se van a utilizar una red neuronal, un árbol de decisión y un bosque aleatorio. Se comienza por
+crear la red neuronal y por aplicarla a los datos de prueba:
+
+#### Modelo de Minería de Datos Redes neuronales.
+
+```{r}
+#crear matrices numéricas para ser consumidas por las redes neuronales.
+entrenamiento.red <- model.matrix(~ family+erythema + scaling + definite + itching + koebner + polygonal + follicular + oral + knee + scalp +melanin + eosinophils + PNL + fibrosis + exocytosis + acanthosis+hyperkeratosis+parakeratosis+clubbing+elongation+thinning+spongiform+munro+focal+disappearance+vacuolisation+spongiosis+saw+follicular+perifollicular+inflammatory+band+Age,
+data = entrenamiento)
+
+prueba.red <- model.matrix(~ family+erythema + scaling + definite + itching + koebner + polygonal + follicular + oral + knee + scalp +melanin + eosinophils + PNL + fibrosis + exocytosis + acanthosis+hyperkeratosis+parakeratosis+clubbing+elongation+thinning+spongiform+munro+focal+disappearance+vacuolisation+spongiosis+saw+follicular+perifollicular+inflammatory+band+Age,
+data = prueba)
+
+#Ajustar los nombres de las columnas
+colnames(entrenamiento.red) <- make.names(colnames(entrenamiento.red))
+colnames(prueba.red) <- make.names(colnames(prueba.red))
+
+set.seed(12345)
+#crear red neuronal con 7 unidades en la capa oculta
+modelo.red <- neuralnet(family1 ~ erythema1+erythema2+erythema3+scaling1+scaling2+scaling3+definite1+definite2+definite3+
+itching1+itching2+itching3+koebner1+koebner2+koebner3+polygonal1+polygonal2+polygonal3+follicular1+follicular2+follicular3+oral1+oral2+oral3+knee1+knee2+knee3+scalp1+scalp2+scalp3+melanin1+melanin2+melanin3+eosinophils1+eosinophils2+PNL1+PNL2+PNL3+fibrosis1+fibrosis2+fibrosis3+exocytosis1+exocytosis2+exocytosis3+acanthosis1+acanthosis2+acanthosis3+hyperkeratosis1+hyperkeratosis2+hyperkeratosis3+parakeratosis1+parakeratosis2+parakeratosis3+clubbing1+clubbing2+clubbing3+elongation1+elongation2+elongation3+thinning1+thinning2+thinning3+spongiform1+spongiform2+spongiform3+munro1+munro2+munro3+focal1+focal2+focal3+disappearance1+disappearance2+disappearance3+vacuolisation1+vacuolisation2+vacuolisation3+spongiosis1+spongiosis2+spongiosis3+saw1+saw2+saw3+perifollicular1+perifollicular2+perifollicular3+inflammatory1+inflammatory2+inflammatory3+band1+band2+band3+Age,
+data = entrenamiento.red,hidden = 7)
+
+#realizar predicciones
+predicciones.red <- compute(modelo.red, prueba.red[ , c(3:ncol(prueba.red) - 1)])
+
+```
+
+
+#### Modelo de Minería de Datos (árbol de decisión)
+
+También podemos crear un modelo utilizando árboles de decisión
+
+```{r}
+
+#crear modelo
+set.seed(12345)
+modelo.arbol <- rpart(family ~ erythema + scaling + definite + itching + koebner + polygonal + follicular + oral + knee + scalp +melanin + eosinophils + PNL + fibrosis + exocytosis + acanthosis+hyperkeratosis+parakeratosis+clubbing+elongation+thinning+spongiform+munro+focal+disappearance+vacuolisation+spongiosis+saw+follicular+perifollicular+inflammatory+band+Age,data = entrenamiento)
+
+#realizar predicciones
+predicciones.arbol <- predict(modelo.arbol, newdata = prueba, type = 'prob')
+
+
+
+```
+
+#### Modelo de Minería de Datos (bosque aleatorio)
+
+Finalmente, el bosque aleatorio:
+
+```{r}
+#crear modelo
+set.seed(12345)
+modelo.bosque <- randomForest(family ~ erythema + scaling + definite + itching + koebner + polygonal + follicular + oral + knee + scalp +melanin + eosinophils + PNL + fibrosis + exocytosis + acanthosis+hyperkeratosis+parakeratosis+clubbing+elongation+thinning+spongiform+munro+focal+disappearance+vacuolisation+spongiosis+saw+follicular+perifollicular+inflammatory+band+Age,data = entrenamiento[!is.na(entrenamiento$Age),])
+
+#realizar predicciones
+predicciones.bosque <- predict(modelo.bosque, newdata = prueba, type = 'prob')
+```
+
+### Evaluación
+
+#### Evaluación (modelo ingenuo)
+
+El primer punto de comparación es contra un modelo ingenuo: (pronostica siempre ‘no’)
+
+```{r}
+modelo.ingenuo <- rep(0, nrow(prueba))
+table(prueba$family, modelo.ingenuo)
+
+detach("package:neuralnet", unload=TRUE) #descargar la librería neural net para poder usar la función predict de ROCR
+prediccionROC.ingenuo <- prediction(modelo.ingenuo, prueba$family)
+# ROC
+as.numeric(performance(prediccionROC.ingenuo, "auc")@y.values)
+
+```
+
+Métricas del Modelo Ingenuo:
+• Exactitud:          87.27%
+• Sensibilidad:       0%
+• Especificidad:      100%
+• Área bajo la curva: 50%
+
+
+#### Evaluación (red neuronal)
+
+```{r}
+# Ver resultados de las redes
+resultado.red <- table(prueba.red[, "family1"], predicciones.red$net.result >=
+0.5)
+resultado.red
+
+detach("package:neuralnet", unload = TRUE)
+
+#predict de ROCR
+prediccionROC.red <- prediction(predicciones.red$net.result, prueba.red[, "family1"])
+
+# ROC
+as.numeric(performance(prediccionROC.red, "auc")@y.values)
+
+ROCR.red <- performance(prediccionROC.red, "tpr", "fpr")
+plot(ROCR.red, main = "Curva ROC - Red Neuronal", colorize = TRUE, print.cutoffs.at = seq(0,
+1, by = 0.1), text.adj = c(-0.2, 1.7))
+
+```
+
+Métricas del Modelo red neuronal:
+• Exactitud:        72.63%
+• Sensibilidad:     41.66%
+• Especificidad:    72.63%
+• Área bajo la curva: 69.21%
+
+#### Evaluación (árbol de decisión)
+
+Continuamos con la evaluación del árbol de decisión. Es levemente mejor que el modelo ingenuo.
+```{r}
+# Evaluar el modelo
+resultados.arbol <- table(prueba$family, predicciones.arbol[,2]>= 0.5)
+resultados.arbol
+
+#predict de ROCR
+prediccionROC.arbol <- prediction(predicciones.arbol[,2],prueba$family)
+
+# ROC
+as.numeric(performance(prediccionROC.arbol, "auc")@y.values)
+
+ROCR.arbol <- performance(prediccionROC.arbol, "tpr", "fpr")
+plot(ROCR.arbol, main = "Curva ROC - Árbol de decisión", colorize = TRUE, print.cutoffs.at = seq(0,
+1, by = 0.1), text.adj = c(-0.2, 1.7))
+
+```
+
+Métricas del Modelo árbol de decisión:
+• Exactitud:        90.04%
+• Sensibilidad:     35.71%
+• Especificidad:    93.75%
+• Área bajo la curva: 75.59%
+
+#### Evaluación (bosque aleatorio)
+
+```{r}
+# Evaluar el modelo
+resultados.bosque <- table(prueba$family, predicciones.bosque[,2] >= 0.5)
+resultados.bosque
+
+#predict de ROCR
+prediccionROC.bosque <- prediction(predicciones.bosque[,2],prueba$family)
+
+# ROC
+as.numeric(performance(prediccionROC.bosque, "auc")@y.values)
+
+ROCR.bosque <- performance(prediccionROC.bosque, "tpr", "fpr")
+plot(ROCR.bosque, main = "Curva ROC - Bosque aleatorio", colorize = TRUE, print.cutoffs.at = seq(0,
+1, by = 0.1), text.adj = c(-0.2, 1.7))
+
+```
+
+Métricas del Modelo bosque aleatorio:
+• Exactitud:        83.63%
+• Sensibilidad:     8.33%
+• Especificidad:    95.78%
+• Área bajo la curva: 82.41%
+### Resultados
+
+
+## Pregunta 3
+
+### Análisis del Problema
+
+### Entendimiento de los Datos
+
+
+### Exploración de los Datos
+
+ 1 Age: Age in years , linear
+      2 Sex: Sex (0 = male; 1 = female) , nominal
+      3 Height: Height in centimeters , linear
+      4 Weight: Weight in kilograms , linear
+      5 QRS duration: Average of QRS duration in msec., linear
+      6 P-R interval: Average duration between onset of P and Q waves
+        in msec., linear
+      7 Q-T interval: Average duration between onset of Q and offset
+        of T waves in msec., linear
+      8 T interval: Average duration of T wave in msec., linear
+      9 P interval: Average duration of P wave in msec., linear
+      
+
+```{r}
+rm(list=ls(all=TRUE))
+
+#librerías utilizadas
+library(cluster)
+
+setwd('D:\\Drive\\Universidad\\Cenfotec\\MBD\\2016 Cuatrimestre 3\\MBD-305 Minería de datos 1\\Semana 13')
+datos <- read.csv('arrhythmia.csv',na.strings = "?")
+
+colnames(datos) <- c("Age","Sex","Height","Weight","QRS","PR","QT","T","P")
+
+datos=datos[,1:9]
+
+```
+
+
+```{r}
+barplot(table(datos$Sex),
+main = 'Cantidad de observaciones por género',
+xlab = 'Género (1 = Mujeres)',
+ylab = 'Observaciones')
+
+```
+
+
+```{r}
+plot(datos$Weight,
+datos$QRS,
+main = 'Relación entre peso y promedio QRS ',
+xlab = 'Peso',
+ylab = 'Promedio QRS')
+
+```
+
+
+### Creación del Modelo
+### Evaluación
+### Resultados
+
+## Pregunta 4
+
+### Análisis del Problema
+### Exploración de los Datos
+### Creación del Modelo
+### Evaluación
+### Resultados

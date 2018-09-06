@@ -1,0 +1,816 @@
+---
+title: "Examen 2"
+author: "Efrén Jiménez"
+date: "7 de diciembre de 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Pregunta 1
+
+**Árbol de Decisión**:Es un modelo utilizado en el ámbito de la inteligencia artificial, por medio de construcciones de diagramas lógicos que sirven para representar y categorizar una serie de condiciones que ocurren de forma sucesiva. 
+
+**Red Neuronal**:Es un modelo utilizado en el ámbito de la inteligencia artificial, inspirado en la forma en que funciona el sistema nervioso biológico en un sistema de interconexión de neuromas que colaboran entre sí para obtener un elemento de salida.
+
+**Bosque Aleatorio**:Es un modelo que utiliza una combinación de árboles de decisión, dado que cada uno de estos árboles depende de un vector aleatorio y una misma distribución para cada uno.
+
+**Serie de Tiempo**: Es una secuencia de observaciones obtenidos en un momento determinado y ordenados cronológicamente.
+
+**Aprendizaje en Conjunto**:Es una técnica para deducir una valor a partir de datos de entrenamiento, el objetivo del aprendizajes es ser capaz de predecir el valor correspondientes a cualquier entrada de valor valida.
+
+**Agrupamiento Jerárquico**:Es un método de análisis de grupos el cual busca construir una jerarquía en distintos grupos.
+
+**Agrupamiento por Particionamiento**:Es un método de análisis de grupos el cual busca construir una distancia o similitud entre el conjunto de datos.
+
+**Matriz Documento – Términos**:Es la frecuencia de ocurrencia de un término en la colección de documentos, es una medida numérica que indica el nivel de relevancia de una palabra en un documento.
+
+**Segmentación o Tokenización (“Tokenization”)**:Es la función de separar las palabras o frases por una longitud n.
+
+**Autoregresión**:Es un proceso estadístico para estimar las relaciones entre variables,en donde se incluye varias técnicas para el modelado y análisis de diversas variables y la relación entre una variable dependiente y una o más variables independientes.
+
+## Pregunta 2
+
+### Análisis del Problema
+La piel es el órgano principal de localización de las infecciones en el hombre, siendo estas infecciones clasificadas en superficiales y profundas. La incidencia del eritematoso escamoso aumenta desde hace años en todo el mundo y muchas veces la adquisición de conocimientos imprescindibles sobre el tema se dificultan por la existencia de diversas tendencias para su estudio.
+Para realizar un estudio en este conjunto de datos, se ha propuesto un análisis para obtener la clasificación del historial familiar en cada una de las nuevas observaciones. 
+
+### Entendimiento de los Datos
+
+Este conjunto de datos contiene 365 observaciones y 35 variables.
+
+- **Eritema** :  Valor numérico entre 0 y 3.
+- **Escalamiento** :  Valor numérico entre 0 y 3.
+- **Fronteras definidas** :  Valor numérico entre 0 y 3.
+- **Picazón** :  Valor numérico entre 0 y 3.
+- **Fenómeno koebner** :  Valor numérico entre 0 y 3.
+- **Pápulas poligonales** :  Valor numérico entre 0 y 3.
+- **Pápulas foliculares** :  Valor numérico entre 0 y 3.
+- **Compromiso de la mucosa oral** :  Valor numérico entre 0 y 3.
+- **Afectación de la rodilla y del codo** :  Valor numérico entre 0 y 3.
+- **Afectación del cuero cabelludo** :  Valor numérico entre 0 y 3.
+- **Historia familiar** :  Valor numérico entre 0 y 1.
+- **Incontinencia de melanina** :  Valor numérico entre 0 y 3.
+- **Eosinófilos en el infiltrado** :  Valor numérico entre 0 y 2.
+- **Infiltrado de PNL** :  Valor numérico entre 0 y 3.
+- **Fibrosis de la dermis papilar** :  Valor numérico entre 0 y 3.
+- **Exocitosis** :  Valor numérico entre 0 y 3.
+- **Acantosis** :  Valor numérico entre 0 y 3.
+- **Hiperqueratosis** :  Valor numérico entre 0 y 3.
+- **Paraqueratosis** :  Valor numérico entre 0 y 3.
+- **Clubbing de las crestas rete** :  Valor numérico entre 0 y 3.
+- **Elongación de las crestas rete** :  Valor numérico entre 0 y 3.
+- **Adelgazamiento de la epidermis suprapapilar** :  Valor numérico entre 0 y 3.
+- **Pústula espongiforme** :  Valor numérico entre 0 y 3.
+- **Microabcès munro** :  Valor numérico entre 0 y 3.
+- **Hipergranulosis focal** :  Valor numérico entre 0 y 3.
+- **Desaparición de la capa granular** :  Valor numérico entre 0 y 3.
+- **Vacuolización y daño de la capa basal** :  Valor numérico entre 0 y 3.
+- **Espongiosis** :  Valor numérico entre 0 y 3.
+- **Aspecto de retes de los dientes de sierra** :  Valor numérico entre 0 y 3.
+- **Enchufe de cuerno folicular** :  V  Valor numérico entre 0 y 3.alor numérico entre 0 y 3.
+- **Paraqueratosis perifolicular** :  Valor numérico entre 0 y 3.
+- **Inflamación monoluclear inflamatoria** :  Valor numérico entre 0 y 3.
+- **Infiltrado en banda** :  Valor numérico entre 0 y 3.
+- **Edad** :  Valor numérico entre 0 y 75.
+
+### Exploración de los Datos
+```{r}
+#librerías utilizadas
+library(caTools)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(lattice)
+library(neuralnet)
+library(ROCR)
+library(pROC)
+library(randomForest)
+
+#Setear el lugar de trabajo
+setwd('D:\\Drive\\Universidad\\Cenfotec\\MBD\\2016 Cuatrimestre 3\\MBD-305 Minería de datos 1\\Semana 13')
+
+#Cargar los datos
+datos <- read.csv('dermatology.csv',na.strings = "?")
+
+#Cargar el nombre d las columnas
+colnames(datos) <- c("erythema","scaling","definite","itching","koebner","polygonal","follicular","oral","knee","scalp","family","melanin","eosinophils","PNL","fibrosis","exocytosis","acanthosis","hyperkeratosis","parakeratosis","clubbing","elongation","thinning","spongiform","munro","focal","disappearance","vacuolisation","spongiosis","saw","follicular","perifollicular","inflammatory","band","Age","unknown")
+
+#Crear los factores
+datos$erythema=factor(datos$erythema)
+datos$scaling=factor(datos$scaling)
+datos$definite=factor(datos$definite)
+datos$itching=factor(datos$itching)
+datos$koebner=factor(datos$koebner)
+datos$polygonal=factor(datos$polygonal)
+datos$follicular=factor(datos$follicular)
+datos$oral=factor(datos$oral)
+datos$knee=factor(datos$knee)
+datos$scalp=factor(datos$scalp)
+datos$family=factor(datos$family)
+datos$melanin=factor(datos$melanin)
+datos$eosinophils=factor(datos$eosinophils)
+datos$PNL=factor(datos$PNL)
+datos$fibrosis=factor(datos$fibrosis)
+datos$exocytosis=factor(datos$exocytosis)
+datos$acanthosis=factor(datos$acanthosis)
+datos$hyperkeratosis=factor(datos$hyperkeratosis)
+datos$parakeratosis=factor(datos$parakeratosis)
+datos$clubbing=factor(datos$clubbing)
+datos$elongation=factor(datos$elongation)
+datos$thinning=factor(datos$thinning)
+datos$spongiform=factor(datos$spongiform)
+datos$munro=factor(datos$munro)
+datos$focal=factor(datos$focal)
+datos$disappearance=factor(datos$disappearance)
+datos$vacuolisation=factor(datos$vacuolisation)
+datos$spongiosis=factor(datos$spongiosis)
+datos$saw=factor(datos$saw)
+datos$follicular=factor(datos$follicular)
+datos$perifollicular=factor(datos$perifollicular)
+datos$inflammatory=factor(datos$inflammatory)
+datos$band=factor(datos$band)
+
+#Visualizar los datos
+str(datos)
+
+#Datos resumidos
+summary(datos)
+
+#dividir el conjunto de datos en entrenamiento y prueba
+set.seed(1234)
+splt <- sample.split(datos$family, SplitRatio = 0.7)
+entrenamiento <- datos[splt, ]
+prueba <- datos[!splt, ]
+
+#Datos resumidos de entrenamiento
+summary(entrenamiento)
+
+#Datos resumidos de prueba
+summary(prueba)
+
+```
+
+En este grafico podemos observar que los registros son mayor mente sin historial.
+```{r}
+
+barplot(table(entrenamiento$family),
+main = 'Distribución de Observaciones por historial familiar',
+ylab = 'Observaciones',
+xlab = 'Historial familiar')
+
+```
+
+En este grafico podemos observar que los registros que no tienen historial familiar rondan los 25 a 50 años y los que si entre los 15 y 50 años.
+```{r}
+boxplot(Age ~ family,
+data = entrenamiento,
+main = 'Distribución de edades por historial familiar',
+xlab = 'Historial familiar (0 No)',
+ylab = 'Edades')
+
+```
+
+En este grafico podemos observar que los registros que no y si tienen historial tienen mayormente en el valor 2 en inflamantorio.
+```{r}
+mosaicplot(~entrenamiento$family + entrenamiento$inflammatory,
+main = 'Proporción de historial familiar por el nivel inflamatorio',
+ylab = 'Nivel inflamatorio',
+xlab = 'Historial familiar (0 = No)')
+```
+
+En este grafico podemos observar que los registros que no y si tienen historial tienen mayormente en el valor 0 en hiperqueratosis.
+```{r}
+mosaicplot(~entrenamiento$family + entrenamiento$hyperkeratosis,
+main = 'Proporción de historial familiar por el nivel hiperqueratosis',
+ylab = 'Nivel hiperqueratosis',
+xlab = 'Historial familiar (0 = No)')
+```
+
+### Creación del Modelo
+
+En este caso, se van a utilizar una red neuronal, un árbol de decisión y un bosque aleatorio. Se comienza por crear la red neuronal y por aplicarla a los datos de prueba:
+
+#### Modelo de Minería de Datos Redes neuronales.
+
+```{r}
+#crear matrices numéricas para ser consumidas por las redes neuronales.
+entrenamiento.red <- model.matrix(~ family+erythema + scaling + definite + itching + koebner + polygonal + follicular + oral + knee + scalp +melanin + eosinophils + PNL + fibrosis + exocytosis + acanthosis+hyperkeratosis+parakeratosis+clubbing+elongation+thinning+spongiform+munro+focal+disappearance+vacuolisation+spongiosis+saw+follicular+perifollicular+inflammatory+band+Age,
+data = entrenamiento)
+
+prueba.red <- model.matrix(~ family+erythema + scaling + definite + itching + koebner + polygonal + follicular + oral + knee + scalp +melanin + eosinophils + PNL + fibrosis + exocytosis + acanthosis+hyperkeratosis+parakeratosis+clubbing+elongation+thinning+spongiform+munro+focal+disappearance+vacuolisation+spongiosis+saw+follicular+perifollicular+inflammatory+band+Age,
+data = prueba)
+
+#Ajustar los nombres de las columnas
+colnames(entrenamiento.red) <- make.names(colnames(entrenamiento.red))
+colnames(prueba.red) <- make.names(colnames(prueba.red))
+
+set.seed(12345)
+
+#crear red neuronal con 7 unidades en la capa oculta
+modelo.red <- neuralnet(family1 ~ erythema1+erythema2+erythema3+scaling1+scaling2+scaling3+definite1+definite2+definite3+
+itching1+itching2+itching3+koebner1+koebner2+koebner3+polygonal1+polygonal2+polygonal3+follicular1+follicular2+follicular3+oral1+oral2+oral3+knee1+knee2+knee3+scalp1+scalp2+scalp3+melanin1+melanin2+melanin3+eosinophils1+eosinophils2+PNL1+PNL2+PNL3+fibrosis1+fibrosis2+fibrosis3+exocytosis1+exocytosis2+exocytosis3+acanthosis1+acanthosis2+acanthosis3+hyperkeratosis1+hyperkeratosis2+hyperkeratosis3+parakeratosis1+parakeratosis2+parakeratosis3+clubbing1+clubbing2+clubbing3+elongation1+elongation2+elongation3+thinning1+thinning2+thinning3+spongiform1+spongiform2+spongiform3+munro1+munro2+munro3+focal1+focal2+focal3+disappearance1+disappearance2+disappearance3+vacuolisation1+vacuolisation2+vacuolisation3+spongiosis1+spongiosis2+spongiosis3+saw1+saw2+saw3+perifollicular1+perifollicular2+perifollicular3+inflammatory1+inflammatory2+inflammatory3+band1+band2+band3+Age,
+data = entrenamiento.red,hidden = 7)
+
+#realizar predicciones
+predicciones.red <- compute(modelo.red, prueba.red[ , c(3:ncol(prueba.red))])
+
+detach("package:neuralnet", unload=TRUE) #descargar la librería neural net para poder usar la función predict de ROCR mas adelante
+
+```
+
+#### Modelo de Minería de Datos (árbol de decisión)
+
+También podemos crear un modelo utilizando árboles de decisión
+
+```{r}
+#crear modelo
+set.seed(12345)
+modelo.arbol <- rpart(family ~ erythema + scaling + definite + itching + koebner + polygonal + follicular + oral + knee + scalp +melanin + eosinophils + PNL + fibrosis + exocytosis + acanthosis+hyperkeratosis+parakeratosis+clubbing+elongation+thinning+spongiform+munro+focal+disappearance+vacuolisation+spongiosis+saw+follicular+perifollicular+inflammatory+band+Age,data = entrenamiento)
+
+#realizar predicciones
+predicciones.arbol <- predict(modelo.arbol, newdata = prueba, type = 'prob')
+```
+
+#### Modelo de Minería de Datos (bosque aleatorio)
+
+Finalmente, el bosque aleatorio:
+
+```{r}
+#crear modelo
+set.seed(12345)
+modelo.bosque <- randomForest(family ~ erythema + scaling + definite + itching + koebner + polygonal + follicular + oral + knee + scalp +melanin + eosinophils + PNL + fibrosis + exocytosis + acanthosis+hyperkeratosis+parakeratosis+clubbing+elongation+thinning+spongiform+munro+focal+disappearance+vacuolisation+spongiosis+saw+follicular+perifollicular+inflammatory+band+Age,data = entrenamiento[!is.na(entrenamiento$Age),])
+
+#realizar predicciones
+predicciones.bosque <- predict(modelo.bosque, newdata = prueba, type = 'prob')
+```
+
+### Evaluación
+
+#### Evaluación (modelo ingenuo)
+
+El primer punto de comparación es contra un modelo ingenuo: (pronostica siempre ‘no’)
+
+```{r}
+modelo.ingenuo <- rep(0, nrow(prueba))
+table(prueba$family, modelo.ingenuo)
+prediccionROC.ingenuo <- prediction(modelo.ingenuo, prueba$family)
+# ROC
+as.numeric(performance(prediccionROC.ingenuo, "auc")@y.values)
+```
+
+**Métricas del modelo ingenuo**:
+
+- Exactitud:          87.27%
+- Sensibilidad:       0%
+- Especificidad:      100%
+- Área bajo la curva: 50%
+
+#### Evaluación (red neuronal)
+
+La evaluación de la red neuronal.
+```{r}
+# Ver resultados de las redes
+resultado.red <- table(prueba.red[, "family1"], predicciones.red$net.result >=
+0.5)
+resultado.red
+
+#predict de ROCR
+prediccionROC.red <- prediction(predicciones.red$net.result, prueba.red[, "family1"])
+
+# ROC
+as.numeric(performance(prediccionROC.red, "auc")@y.values)
+
+ROCR.red <- performance(prediccionROC.red, "tpr", "fpr")
+plot(ROCR.red, main = "Curva ROC - Red Neuronal", colorize = TRUE, print.cutoffs.at = seq(0,
+1, by = 0.1), text.adj = c(-0.2, 1.7))
+
+```
+
+**Métricas del Modelo red neuronal**:
+
+- Exactitud:        74.76%
+- Sensibilidad:     16.66%
+- Especificidad:    82.10%
+- Área bajo la curva: 69.21%
+
+#### Evaluación (árbol de decisión)
+
+La evaluación del árbol de decisión.
+```{r}
+# Evaluar el modelo
+resultados.arbol <- table(prueba$family, predicciones.arbol[,2]>= 0.5)
+resultados.arbol
+
+#predict de ROCR
+prediccionROC.arbol <- prediction(predicciones.arbol[,2],prueba$family)
+
+# ROC
+as.numeric(performance(prediccionROC.arbol, "auc")@y.values)
+
+ROCR.arbol <- performance(prediccionROC.arbol, "tpr", "fpr")
+plot(ROCR.arbol, main = "Curva ROC - Árbol de decisión", colorize = TRUE, print.cutoffs.at = seq(0,
+1, by = 0.1), text.adj = c(-0.2, 1.7))
+```
+
+**Métricas del Modelo árbol de decisión**:
+
+- Exactitud:        86.36%
+- Sensibilidad:     35.71%
+- Especificidad:    93.75%
+- Área bajo la curva: 75.59%
+
+#### Evaluación (bosque aleatorio)
+La evaluación del bosque aleatorio.
+```{r}
+# Evaluar el modelo
+resultados.bosque <- table(prueba$family, predicciones.bosque[,2] >= 0.5)
+resultados.bosque
+
+#predict de ROCR
+prediccionROC.bosque <- prediction(predicciones.bosque[,2],prueba$family)
+
+# ROC
+as.numeric(performance(prediccionROC.bosque, "auc")@y.values)
+
+ROCR.bosque <- performance(prediccionROC.bosque, "tpr", "fpr")
+plot(ROCR.bosque, main = "Curva ROC - Bosque aleatorio", colorize = TRUE, print.cutoffs.at = seq(0,
+1, by = 0.1), text.adj = c(-0.2, 1.7))
+```
+
+**Métricas del Modelo bosque aleatorio**:
+
+- Exactitud:        83.17%
+- Sensibilidad:     8.33%
+- Especificidad:    92.63%
+- Área bajo la curva: 82.01%
+
+### Resultados
+
+**En conclusion podemos obtener el siguiente resumen**:
+
+- El modelo ingenuo es muy bueno obteniendo verdaderos negativos, pero malo obteniendo verdadero positivo.
+- El modelo de árbol de decisión tiene el mayor valor de exactitud de los 4 modelos.
+- El modelo de árbol de decisión tiene el mayor valor de especificidad entre los modelos red neuronal y bosque aleatorio.
+- El modelo de árbol de decisión tiene el mayor valor de sensibilidad de los 4 modelos.
+- El modelo que tiene mayor cobertura bajo la curva es bosque aleatorio.
+- El mejor modelo para utilizar es el de árbol de decisión.
+- Ningún modelo es adecuado ni recomendable para obtener verdaderos positivos.
+
+**Métricas del modelo ingenuo**:
+
+- Exactitud:          87.27%
+- Sensibilidad:       0%
+- Especificidad:      100%
+- Área bajo la curva: 50%
+
+**Métricas del Modelo red neuronal**:
+
+- Exactitud:        74.76%
+- Sensibilidad:     16.66%
+- Especificidad:    82.10%
+- Área bajo la curva: 69.21%
+
+**Métricas del Modelo árbol de decisión**:
+
+- Exactitud:        86.36%
+- Sensibilidad:     35.71%
+- Especificidad:    93.75%
+- Área bajo la curva: 75.59%
+
+**Métricas del Modelo bosque aleatorio**:
+
+- Exactitud:        83.17%
+- Sensibilidad:     8.33%
+- Especificidad:    92.63%
+- Área bajo la curva: 82.01%
+
+## Pregunta 3
+
+### Análisis del Problema
+
+El objetivo es distinguir entre la presencia y ausencia de arritmia cardíaca y clasificarlo en grupos. Para el tiempo, existe un programa de computadora que hace una clasificación. Sin embargo, existen diferencias entre cardiología y la clasificación de los programas. Tomando los cardiólogos como un patrón de oro para pretender minimizar esa diferencia mediante herramientas de aprendizaje automático.
+
+Se quiere determinar cuántos grupos se deben crear y cuáles características tienen estos grupos.
+
+### Entendimiento de los Datos
+
+Este conjunto de datos contiene 9 atributos y 451 observaciones.
+
+- **Edad** :  Valor numérico entre 0 y 83.
+- **Sexo** :  Valor numérico entre 0 y 1 (0 Hombre - 1 mujer).
+- **Altura** :  Valor numérico entre 105 y 780.
+- **Peso** :  Valor numérico entre 6 y 176.
+- **Duración del QRS** :  Valor numérico entre 55 y 188.
+- **Intervalo P-R** :  Valor numérico entre 0 y 524.
+- **Intervalo Q-T** :  Valor numérico entre 232 y 509.
+- **Intervalo T** :  Valor numérico entre 108 y 381.
+- **Intervalo P** :  Valor numérico entre 0 y 205.
+
+### Exploración de los Datos
+
+```{r}
+#limpiar variables
+rm(list=ls(all=TRUE))
+
+#librerías utilizadas
+library(cluster)
+
+setwd('D:\\Drive\\Universidad\\Cenfotec\\MBD\\2016 Cuatrimestre 3\\MBD-305 Minería de datos 1\\Semana 13')
+datos <- read.csv('arrhythmia.csv',na.strings = "?")
+
+colnames(datos) <- c("Age","Sex","Height","Weight","QRS","PR","QT","T","P")
+
+datos=datos[,1:9]
+
+#Visualizar los datos
+str(datos)
+
+#Datos resumidos
+summary(datos)
+
+```
+
+En este grafico podemos observar que los registros son mayormente mujeres.
+```{r}
+barplot(table(datos$Sex),
+main = 'Cantidad de observaciones por género',
+xlab = 'Género (1 = Mujeres)',
+ylab = 'Observaciones')
+```
+
+En este grafico podemos observar que el peso de un hombre está alrededor de 60 y 80 y de una mujer de 60 a 70.
+```{r}
+boxplot(datos$Weight ~ factor(datos$Sex),
+main = 'Relación entre duración del peso y género',
+xlab = 'Género (1 = Mujeres)',
+ylab = 'Peso')
+```
+
+En este grafico podemos observar que la duración del QRS de un hombre está alrededor de 80 y 100 y de una mujer de 70 a 90.
+```{r}
+boxplot(datos$QRS ~ factor(datos$Sex),
+main = 'Relación entre duración del QRS y género',
+xlab = 'Género (1 = Mujeres)',
+ylab = 'Duración del QRS')
+```
+
+En este grafico podemos observar que la duración del PR de un hombre y de una mujer son muy similares.
+```{r}
+boxplot(datos$PR ~ factor(datos$Sex),
+main = 'Relación entre duración del PR y género',
+xlab = 'Género (1 = Mujeres)',
+ylab = 'Duración del PR')
+```
+
+### Creación del Modelo
+
+#### Creación del Modelo jerárquico:
+
+Para determinar la cantidad de clústeres que se pueden crear, se procede a hacer un agrupamiento jerárquico:
+```{r}
+distancias <- dist(datos, method="euclidean")
+datos.jerarquico <- hclust(distancias, method="ward.D")
+```
+
+Para este análisis, vamos a utilizar 6 grupos.
+```{r}
+plot(datos.jerarquico) 
+rect.hclust(datos.jerarquico, k = 6, border = "red") 
+cluster.jerarquico <- factor(cutree(datos.jerarquico, k=6))
+```
+
+Luego de hacer el análisis jerárquico, se procede a hacer el análisis utilizando el algoritmo KMeans con 6 centros:
+```{r}
+set.seed(12345)
+km <- kmeans(datos, centers = 6)
+cluster.kmeans <- factor(km$cluster)
+```
+
+El resultado se puede visualizar así: (Los colores de los puntos representan el grupo al cual pertenecen)
+```{r}
+#Visualizar los Clústeres
+clusplot(datos,
+km$cluster,
+col.p = km$cluster,
+color=TRUE,
+shade=TRUE,
+labels=2,
+lines=0,
+main = 'Visualización de los Clústeres')
+```
+
+### Evaluación
+
+Con el fin de comparar ambos agrupamientos, podemos generar tablas resumen para comparar los valores
+promedios de cada variable en cada grupo:
+```{r}
+resultado.jerarquico <- rbind(tapply(datos$Age, cluster.jerarquico, mean),
+                              tapply(datos$Sex, cluster.jerarquico, mean),
+                              tapply(datos$Height, cluster.jerarquico, mean),
+                              tapply(datos$Weight, cluster.jerarquico, mean),
+                              tapply(datos$QRS, cluster.jerarquico, mean),
+                              tapply(datos$PR, cluster.jerarquico, mean),
+                              tapply(datos$QT, cluster.jerarquico, mean),
+                              tapply(datos$T, cluster.jerarquico, mean),
+                              tapply(datos$P, cluster.jerarquico, mean)
+                              )
+
+rownames(resultado.jerarquico) <- c('Age', 'Sex', 'Height','Weight', 'QRS', 'PR', 'QT', 'T', 'P')
+resultado.jerarquico[2,]<-round(resultado.jerarquico[2,],0)
+resultado.jerarquico
+```
+
+Los grupos creados se pueden resumir así:
+
+- **Grupo 1**: Hombres con edad promedio de 52 años,altura 167,peso 72,duración del QRS 87,intervalo P-R 208,intervalo Q-T 363,intervalo T 158,intervalo P 121. 
+- **Grupo 2**: Hombres con edad promedio de 46 años,altura 162,peso 70,duración del QRS 104,intervalo P-R 162,intervalo Q-T 376,intervalo T 243,intervalo P 94. 
+- **Grupo 3**: Mujeres con edad promedio de 50 años,altura 164,peso 67,duración del QRS 88,intervalo P-R 0,intervalo Q-T 356,intervalo T 155,intervalo P 36.
+- **Grupo 4**: Mujeres con edad promedio de 50 años,altura 164,peso 69,duración del QRS 87,intervalo P-R 161,intervalo Q-T 392,intervalo T 160,intervalo P 90.
+- **Grupo 5**: Hombres con edad promedio de 0.5 años,altura 694,peso 8,duración del QRS 84,intervalo P-R 145,intervalo Q-T 234,intervalo T 139,intervalo P 83.
+- **Grupo 6**: Hombres con edad promedio de 42 años,altura 163,peso 65,duración del QRS 85,intervalo P-R 146,intervalo Q-T 347,intervalo T 158,intervalo P 85.
+
+De manera similar, se puede generar un resumen para los grupos creados con el algoritmo KMeans:
+```{r}
+resultado.kmeans <- rbind(tapply(datos$Age, cluster.kmeans, mean),
+                          tapply(datos$Sex, cluster.kmeans, mean),
+                          tapply(datos$Height, cluster.kmeans, mean),
+                          tapply(datos$Weight, cluster.kmeans, mean),
+                          tapply(datos$QRS, cluster.kmeans, mean),
+                          tapply(datos$PR, cluster.kmeans, mean),
+                          tapply(datos$QT, cluster.kmeans, mean),
+                          tapply(datos$T, cluster.kmeans, mean),
+                          tapply(datos$P, cluster.kmeans, mean))
+rownames(resultado.kmeans) <- c('Age', 'Sex', 'Height','Weight', 'QRS', 'PR', 'QT', 'T', 'P')
+resultado.kmeans[2,]<-round(resultado.kmeans[2,],0)
+resultado.kmeans
+```
+
+Los grupos creados se pueden resumir así:
+
+- **Grupo 1**: Hombres con edad promedio de 47 años,altura 167,peso 75,duración del QRS 90,intervalo P-R 151,intervalo Q-T 382,intervalo T 168,intervalo P 87. 
+- **Grupo 2**: Hombres con edad promedio de 47 años,altura 163,peso 70,duración del QRS 103,intervalo P-R 166,intervalo Q-T 371,intervalo T 233,intervalo P 95. 
+- **Grupo 3**: Mujeres con edad promedio de 54 años,altura 164,peso 70,duración del QRS 84,intervalo P-R 183,intervalo Q-T 369,intervalo T 151,intervalo P 104.
+- **Grupo 4**: Mujeres con edad promedio de 36 años,altura 159,peso 57,duración del QRS 84,intervalo P-R 142,intervalo Q-T 345,intervalo T 153,intervalo P 79.
+- **Grupo 5**: Hombres con edad promedio de 50 años,altura 165,peso 68,duración del QRS 88,intervalo P-R 0,intervalo Q-T 356,intervalo T 155,intervalo P 37.
+- **Grupo 6**: Hombres con edad promedio de 0.5 años,altura 694,peso 8,duración del QRS 84,intervalo P-R 145,intervalo Q-T 234,intervalo T 139,intervalo P 83.
+
+### Resultados
+
+De los anteriores datos podemos concluir que los datos Edad,Sexo,Altura,Duración del QRS,Intervalo P-R,Intervalo Q-T,Intervalo T,Intervalo P, idependiendemente del algoritmo utilizado(jerárquico o KMeans), los grupos en general son básicamente los mismo. Existen varios grupos que varían pequeñas cosas, pero en general no representan grandes diferencias.
+En resumen ambos modelos son muy válidos para cualquiera de la expectativas esperadas en el análisis.
+
+## Pregunta 4
+
+### Análisis del Problema
+
+Australia ha estado habitada desde hace por lo menos cuarenta y seis mil años por los aborígenes australianos. Su descubrimiento se habría producido tras las esporádicas visitas de españoles y portugueses que exploraron la costa septentrional y occidental de Australia.
+La mayor parte de los aproximadamente 25 millones de australianos viven concentrados en las principales ciudades. La población de Australia se ha cuadriplicado desde el final de la Primera Guerra Mundial,39 incentivada por un ambicioso programa de inmigración. 
+
+### Entendimiento de los Datos
+
+Números (en miles) de residentes australianos medidos trimestralmente de marzo de 1971 a marzo de 1994.
+Contiene 89 observaciones.
+
+- **Serie de tiempo** :  Valor numérico entre 1971 y 1993
+
+### Exploración de los Datos
+
+```{r}
+#limpiar variables
+rm(list=ls(all=TRUE))
+
+#librerías utilizadas
+library(forecast)
+
+data(austres)
+
+#Visualizacíon de los datos
+plot(austres,
+main = 'Cantidad de residentes australianos',
+xlab = 'Residentes',
+ylab = 'Año')
+
+#Diferenciación,2 nivel
+
+austresDiff2 <- diff(austres,differences = 2)
+
+#Visualizacíon de los datos diferenciados
+plot(austresDiff2,
+main = 'Cantidad de residentes australianos - d=2',
+xlab = 'Residentes',
+ylab = 'Año')
+
+#Creación del correlograma
+acf(austresDiff2,lag.max = 25,#visualizar 25 retrasos o 'lags'
+    main="Correlograma Cantidad de residentes australianos")
+
+#Ver solo los valores
+acf(austresDiff2,lag.max = 25,#visualizar 25 retrasos o 'lags'
+    plot = FALSE)
+
+#Creación del correlograma parcial
+pacf(austresDiff2,lag.max = 25,#visualizar 25 retrasos o 'lags'
+    main="Correlograma Parcial Cantidad de residentes australianos")
+
+#Ver solo los valores 
+pacf(austresDiff2,lag.max = 25,#visualizar 25 retrasos o 'lags'
+    plot = FALSE)
+
+```
+
+### Creación del Modelo
+
+#### Modelo IMA(0,2,0.25)
+```{r}
+#Crear modelo
+modelo1<-arima(austres,order = c(0,2,0.25)) #p=0,d=2,q=0.25
+#Ver modelo
+modelo1
+#Hacer predicciones
+predicciones.modelo1<-forecast.Arima(modelo1,h=10)#Pronosticar los próximos 10 periodos
+```
+
+#### Modelo IMA(0,2,0.50)
+```{r}
+#Crear modelo
+modelo2<-arima(austres,order = c(0,2,0.50)) #p=0,d=2,q=0.50
+#Ver modelo
+modelo2
+#Hacer predicciones
+predicciones.modelo2<-forecast.Arima(modelo2,h=10)#Pronosticar los próximos 10 periodos
+```
+
+#### Modelo IMA(0,2,0.75)
+```{r}
+#Crear modelo
+modelo3<-arima(austres,order = c(0,2,0.75)) #p=0,d=2,q=0.75
+#Ver modelo
+modelo3
+#Hacer predicciones
+predicciones.modelo3<-forecast.Arima(modelo3,h=10)#Pronosticar los próximos 10 periodos
+```
+
+#### Modelo ARIMA(2.50,2,0.25)
+```{r}
+#Crear modelo
+modelo4<-arima(austres,order = c(2.50,2,0.25)) #p=2.50,d=2,q=0.25
+#Ver modelo
+modelo4
+#Hacer predicciones
+predicciones.modelo4<-forecast.Arima(modelo4,h=10)#Pronosticar los próximos 10 periodos
+```
+
+#### Modelo ARIMA(3,2,0.50)
+```{r}
+#Crear modelo
+modelo5<-arima(austres,order = c(3,2,0.50)) #p=3,d=2,q=0.50
+#Ver modelo
+modelo5
+#Hacer predicciones
+predicciones.modelo5<-forecast.Arima(modelo5,h=10)#Pronosticar los próximos 10 periodos
+```
+
+#### Modelo ARIMA(5,2,0.75)
+```{r}
+#Crear modelo
+modelo6<-arima(austres,order = c(5,2,0.75)) #p=5,d=2,q=0.75
+#Ver modelo
+modelo6
+#Hacer predicciones
+predicciones.modelo6<-forecast.Arima(modelo6,h=10)#Pronosticar los próximos 10 periodos
+```
+
+
+
+### Evaluación
+#### Modelo IMA(0,2,0.25)
+```{r}
+#Ver serie de tiempo con las prediciones
+plot.forecast(predicciones.modelo1,
+              main = 'Prediciones modelo IMA(0,2,0.25)',
+              xlab='Año',
+              ylab ='Cantidad de residentes australianos')
+
+#Distribución de los residuos
+hist(predicciones.modelo1$residuals,
+     main = 'Distribución de los residuos del modelo IMA(0,2,0.25)',
+     xlab='Residuos')
+
+```
+
+#### Modelo IMA(0,2,0.50)
+```{r}
+#Ver serie de tiempo con las prediciones
+plot.forecast(predicciones.modelo2,
+              main = 'Prediciones modelo IMA(0,2,0.50)',
+              xlab='Año',
+              ylab ='Cantidad de residentes australianos')
+
+#Distribución de los residuos
+hist(predicciones.modelo2$residuals,
+     main = 'Distribución de los residuos del modelo IMA(0,2,0.50)',
+     xlab='Residuos')
+```
+
+#### Modelo IMA(0,2,0.75)
+```{r}
+#Ver serie de tiempo con las prediciones
+plot.forecast(predicciones.modelo3,
+              main = 'Prediciones modelo IMA(0,2,0.75)',
+              xlab='Año',
+              ylab ='Cantidad de residentes australianos')
+
+#Distribución de los residuos
+hist(predicciones.modelo3$residuals,
+     main = 'Distribución de los residuos del modelo IMA(0,2,0.75)',
+     xlab='Residuos')
+```
+
+#### Modelo ARIMA(2.50,2,0.25)
+```{r}
+#Ver serie de tiempo con las prediciones
+plot.forecast(predicciones.modelo4,
+              main = 'Prediciones modelo ARIMA(2.50,2,0.25)',
+              xlab='Año',
+              ylab ='Cantidad de residentes australianos')
+
+#Distribución de los residuos
+hist(predicciones.modelo4$residuals,
+     main = 'Distribución de los residuos del modelo ARIMA(2.50,2,0.25)',
+     xlab='Residuos')
+```
+
+#### Modelo ARIMA(3,2,0.50)
+```{r}
+#Ver serie de tiempo con las prediciones
+plot.forecast(predicciones.modelo5,
+              main = 'Prediciones modelo ARIMA(3,2,0.50)',
+              xlab='Año',
+              ylab ='Cantidad de residentes australianos')
+
+#Distribución de los residuos
+hist(predicciones.modelo5$residuals,
+     main = 'Distribución de los residuos del modelo ARIMA(3,2,0.50)',
+     xlab='Residuos')
+```
+
+#### Modelo ARIMA(5,2,0.75)
+```{r}
+#Ver serie de tiempo con las prediciones
+plot.forecast(predicciones.modelo6,
+              main = 'Prediciones modelo ARIMA(5,2,0.75)',
+              xlab='Año',
+              ylab ='Cantidad de residentes australianos')
+
+#Distribución de los residuos
+hist(predicciones.modelo6$residuals,
+     main = 'Distribución de los residuos del modelo ARIMA(5,2,0.75)',
+     xlab='Residuos')
+```
+
+
+### Resultados
+
+- Al crear los 6 posibles modelos ARIMA, se tiene el siguiente resumen:
+
+**Modelo IMA(0,2,0.25)**
+log likelihood = -335.23, aic = 672.46
+
+**Modelo IMA(0,2,0.50)**
+log likelihood = -335.23, aic = 672.46
+
+**Modelo IMA(0,2,0.75)**
+log likelihood = -335.23, aic = 672.46
+
+**Modelo ARIMA(2.50,2,0.25)**
+log likelihood = -324.93, aic = 655.86
+
+**Modelo ARIMA(3,2,0.50)**
+log likelihood = -322.08, aic = 652.17
+
+**Modelo ARIMA(5,2,0.75)**
+log likelihood = -321.76, aic = 655.51
+
+- De acuerdo con el Akaike Information Criteria (AIC), el modelo donde se pierde menos
+información es el **Modelo ARIMA(3,2,0.50)**
+
+
+Las predicciones son las siguientes:
+```{r}
+predicciones.modelo5
+predicciones.modelo5$lower
+predicciones.modelo5$upper
+as.numeric(predicciones.modelo5$mean)
+```
+
+En este grafico podemos observar que el crecimiento de residente va a incrementarse en los próximos años.
+```{r}
+plot.forecast(predicciones.modelo5,
+main = 'Prediciones modelo ARIMA(3,2,0.50)',
+xlab='Año',
+ylab ='Cantidad de residentes australianos')
+```
+
