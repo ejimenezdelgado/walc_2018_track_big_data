@@ -1,0 +1,76 @@
+---
+title: "Ejercicio2"
+author: "Efrén Jiménez Delgado"
+date: "9 de junio de 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+options(warn=-1)
+assign("last.warning", NULL, envir = baseenv())
+knitr::opts_chunk$set(echo = TRUE,warn=-1)
+```
+
+## Paquetes a usar
+```{r}
+# install.packages("wordcloud",dependencies = TRUE)
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+```
+
+## Se escoje el texto a analizar
+```{r}
+setwd("C:\\Users\\Efren\\Desktop\\ejercicios\\archivos")
+Desvestido <- suppressWarnings(paste(readLines("Desvestido.txt"), collapse=" "))
+Parto <- suppressWarnings(paste(readLines("Parto.txt"), collapse=" "))
+Poema <- suppressWarnings(paste(readLines("Poema.txt"), collapse=" "))
+Resurreccion <- suppressWarnings(paste(readLines("Resurreccion.txt"), collapse=" "))
+Este.es.mi.amor  <- suppressWarnings(paste(readLines("Esteesmiamor.txt"), collapse=" "))
+```
+
+## Se genera la matriz de frecuencias de las palabras de los textos. Además se usan filtros para extraer palabras no destacables
+```{r}
+# Une los textos en un dataframe
+tmpText <- data.frame(c(Desvestido,Parto,Poema,Resurreccion,Este.es.mi.amor))
+# Interpreta cada fila del data frame como un documento
+ds <- DataframeSource(tmpText)
+# class(ds)
+# Cambia el tipo a ds para ser "VCorpus" para que se le puedan aplicar las siguientes funciones del paquete tm
+corp <- Corpus(ds)
+# class(corp)
+# Elimina puntuación
+corp <- tm_map(corp,removePunctuation)
+# Pone el texto en minísculas 
+corp <- tm_map(corp,tolower)
+# Remueve números
+corp <- tm_map(corp,removeNumbers)
+# Elimina palabras que no tiene sentido analizar, en este caso en Español
+corp <- tm_map(corp, removeWords, stopwords("spanish"))
+# Transforma "corp" en untexto plano
+corp <- tm_map(corp, PlainTextDocument)
+# Genera la matriz de términos
+term.matrix <- TermDocumentMatrix(corp)
+term.matrix <- as.matrix(term.matrix)
+dim(term.matrix)
+```
+
+## Se genera la matriz de frecuencias de las palabras de los textos. Además se usan filtros para extraer palabras no destacables
+```{r}
+colnames(term.matrix) <- c("Desvestido","Parto","Poema","Resurreccion","Este es mi amor")
+head(term.matrix)
+```
+
+## Se grafica la nube con las palabras más utilizadas por todos los textos
+```{r}
+commonality.cloud(term.matrix,comonality.measure=min,max.words=Inf)
+```
+
+## Se grafica la nube de palabras de las más frecuentes en texto
+```{r}
+comparison.cloud(term.matrix,max.words=Inf,random.order=FALSE,colors=brewer.pal(8,"Dark2"),scale=c(6,1),title.size = 1.5)
+```
+
+

@@ -1,0 +1,176 @@
+---
+title: "Index"
+author: "Efrén Jiménez"
+date: "4 de junio de 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Mining: Conexión entre R y Twitter
+
+###Instaladores
+install.packages("twitteR")
+install.packages("base64enc")
+install.packages("stringr")
+install.packages("lubridate")
+install.packages("ggplot2")
+
+###Conexión
+```{r}
+library(base64enc)
+library(twitteR)
+library(stringr)
+library(lubridate)
+library(ggplot2)
+api_key <- "QxJVwsr1emy2zx4NDF9GomqF8"
+api_secret <- "HpsbjLisWp8dzaJ5SjquNJGM0pkYaS83pXSDQ7PNYuh7NRlfn0"
+access_token <- "1003669823325392896-ng93NuiPLNU4WNDsnDJBjjsCcX0ulS"
+access_token_secret <- "RnHDGUl8v28MoClWw9dHRRfYKXE0eO2tBv1biSdngpdeS"
+setup_twitter_oauth(api_key, api_secret, access_token, access_token_secret)
+```
+
+##Realizamos una consulta a el api de Twitter
+En este caso consultaremos tuits relacionados al muy sonado caso del Samsung Galaxy Note 7:
+
+```{r}
+tuits <- twitteR::searchTwitteR("GitHub", n=1000000, lang="es", since="2018-01-01", until="2018-05-31",
+locale=NULL, geocode=NULL, sinceID=NULL, maxID=NULL,
+resultType=NULL, retryOnRateLimit=1200000)
+# Es recomendable guardar los datos en disco 
+# ya que su descarga de internet puede ser muy lenta.
+setwd("C://Universidad//TEC//Data science//Twitter")
+save(tuits,file = "github_before.RData")
+```
+Una vez tenemos los datos el primer paso será limpiarlos, en la siguiente función se eliminan partes del texto que puedan considerarse como “basura”.
+
+```{r}
+limpiar.tuits <- function(tuit){
+    # Eliminar los links
+    texto <- tuit$text
+    texto <- str_replace_all(texto,"(f|ht)(tp)(s?)(://)(.*)[.|/](.*)", " ")
+    # Elimina la referencia a un retuit
+    texto <- str_replace_all(texto,"(RT|via)((?:\\b\\W*@\\w+)+)", " ")
+    # Elimina los #hashtag
+    texto <- str_replace_all(texto,"#\\w+", " ")
+    # Elimina la referencia a @usuarios
+    texto <- str_replace_all(texto,"@\\w+", " ")
+    # Elimina los signos de puntuación
+    texto <- str_replace_all(texto,"[[:punct:]]", " ")
+    # Elimina los numeros
+    texto <- str_replace_all(texto,"[[:digit:]]", " ")
+    # Elimina espacios innecesarios
+    texto <- str_replace_all(texto,"[ \t]{2,}", " ")
+    texto <- str_replace_all(texto,"^\\s+|\\s+$", "")
+    texto <- str_replace_all(texto,"\\n", "")
+    # Retorna el texto limpio y la fecha de publicación
+    list(texto =texto,fecha = as.character(tuit$created))
+}
+```
+
+Aplicamos la función de limpieza sobre todos los tuits de la lista:
+
+```{r}
+tuits.limpios <- lapply(tuits,limpiar.tuits)
+tuits.limpios[[1]]
+```
+Con el texto limpio llega el momento de cargar los listados de palabras “positivas” y “negativas” que nos ayudaran a puntuar el contenidos de los tuits
+##Carga de las palabras positivas:
+
+```{r}
+setwd("C://Universidad//TEC//Data science//Twitter")
+palabras.positivas <-read.csv("Palabras-Positivas.csv",stringsAsFactors = F)
+palabras.positivas <- as.vector(palabras.positivas[,1])
+head(palabras.positivas)
+```
+##Carga de las palabras positivas:
+```{r}
+setwd("C://Universidad//TEC//Data science//Twitter")
+palabras.negativas <-read.csv("Palabras-Negativas.csv",stringsAsFactors = F)
+palabras.negativas <- as.vector(palabras.negativas[,1])
+head(palabras.negativas)
+```
+##Carga de las palabras positivas:
+```{r}
+extraer.puntaje <- function(tuits, palabras.positivas,palabras.negativas) {
+  # Inicio de la función    
+  puntajes <-  lapply(tuits,
+  function(tuit, palabras.positivas, palabras.negativas) {
+    # Extraemos el texto del tuit
+    texto <- tuit$texto
+    # Separamos el texto en palabras independientes
+    palabras = unlist(str_split(texto, '\\s+'))
+    # Conteo de palabras positivas
+    positivos = !is.na(match(palabras, palabras.positivas))
+    # Conteo de palabras negativas
+    negativos = !is.na(match(palabras, palabras.negativas))
+    # Diferencia entre palabras positivas y negativas
+    puntaje = sum(positivos) - sum(negativos)
+    # Se retorna el texto,puntaje y la fecha de publicación
+    return(list(texto = tuit$texto,calificacion = puntaje,fecha = tuit$fecha))
+  }, palabras.positivas, palabras.negativas)
+  # Se convierte a un data.frame y se da formato a las columnas.
+  salida <- data.frame(matrix(unlist(puntajes),ncol = 3,byrow = T),stringsAsFactors = F)
+  colnames(salida) <- c("texto","puntaje","fecha")
+  salida["fecha"] <- ymd_hms(salida[,3])
+  salida["puntaje"] <- as.integer(salida[,2])
+  return(salida)
+  # Fin de la función
+}
+```
+
+Aplicamos la función extraer.puntaje a la lista de tuits consultados acerca del tema “github antes de microsoft”:
+```{r}
+caso.antes <- extraer.puntaje(tuits.limpios,palabras.positivas,palabras.negativas)
+```
+
+Repetimos el ejercicio ahora utilizando el tema “Iphone 7”:
+```{r}
+tuits2 <- twitteR::searchTwitteR("GitHub", n=1000000, lang="es", since="2018-06-01", until="2018-06-30",
+locale=NULL, geocode=NULL, sinceID=NULL, maxID=NULL,
+resultType=NULL, retryOnRateLimit=1200000)
+# Es recomendable guardar los datos en disco 
+# ya que su descarga de internet puede ser muy lenta.
+setwd("C://Universidad//TEC//Data science//Twitter")
+save(tuits2,file = "github_after.RData")
+```
+```{r}
+tuits.limpios <- lapply(tuits2,limpiar.tuits)
+tuits.limpios[[1]]
+```
+
+```{r}
+caso.despues <- extraer.puntaje(tuits.limpios,palabras.positivas,palabras.negativas)
+```
+
+##Graficando los resultados:
+```{r}
+caso.antes$puntaje <- ifelse(caso.antes$puntaje>-1,"Positivo","Negativo")
+caso.despues$puntaje <- ifelse(caso.despues$puntaje>-1,"Positivo","Negativo")
+```
+
+##Grafica para Github antes:
+```{r}
+g <- ggplot(caso.antes,aes(caso.antes$puntaje,fill=caso.antes$puntaje))+ geom_bar()
+g + theme(panel.grid.major = element_line(colour = "gray83"), 
+    plot.title = element_text(size = 14, face = "bold"), 
+    panel.background = element_rect(fill = "gray100")) +
+    labs(title = "Opiniones 'negativas' vs 'positivas' : Iphone 7 21/10/2016", 
+    x = "Categoria", y = "Cantidad de comentarios", 
+    fill = "Categorias")
+```
+
+```{r}
+g <- ggplot(caso.despues,aes(caso.despues$puntaje,fill=caso.despues$puntaje))+ geom_bar()
+g + theme(panel.grid.major = element_line(colour = "gray83"), 
+    plot.title = element_text(size = 14, face = "bold"), 
+    panel.background = element_rect(fill = "gray100")) +
+    labs(title = "Opiniones 'negativas' vs 'positivas' :Galaxy Note 7 21/10/2016", 
+    x = "Categoria", y = "Cantidad de comentarios", 
+    fill = "Categorias")
+```
+
+
+

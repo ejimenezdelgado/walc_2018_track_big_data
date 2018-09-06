@@ -1,0 +1,180 @@
+---
+title: "Ejercicio 1"
+author: "Efrén Jiménez Delgado"
+date: "26 de julio de 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Análisis del Problema
+
+Uno de los principales retos que ha encontrado la humanidad de la era moderna, ha sido la lucha contra el cáncer. Solo en el 2012, se le atribuyeron 8.2 millones de muertes a nivel mundial. Los cánceres que causan más muertes son los de pulmón, hígado, estómago, colon y mama. (Fuente: http://www.who.int/cancer/about/facts/es/)
+
+El cáncer de mama se da principalmente en las mujeres, sin embargo también puede darse en los hombres. Como con los otros tipos de cáncer, no se conoce cómo o por qué se desarrolla, a pesar de que se conocen varios factores generales de riesgo (índice de masa corporal elevado, consumo insuficiente de frutas y erduras, falta de actividad física y consumo de tabaco y alcohol.)
+
+A través de los años se han trabajado diferentes enfoques en la lucha contra el cáncer, no de ellos es el de detección temprana. Este enfoque busca detectar los síntomas de la enfermedad apenas están comenzando a desarrollarse, para determinar cómo puede evolucionar y así determinar el mejor tratamiento para el o la paciente.
+
+Sobre esta línea, al detectarse los primeros tumores o masas en el cuerpo de un paciente, una de las principales decisiones es determinar si es un tumor benigno o maligno. Como parte de los esfuerzos para entender mejor esta enfermedad, se realizó un estudio de varias características del núcleo de las células en tumores extraídos de pacientes femeninas en Estados Unidos. El propósito de dicho estudio es tratar de predecir, o clasificar automáticamente si un tumor es benigno o maligno basado en dichas carácterísticas del núcleo de sus células.
+
+
+## Entendimiento de los Datos
+
+Como parte del estudio, se recolectaron los siguientes datos:
+
+- Sample.number: número de muestra; números enteros entre 61634 y 13454352.
+- Thickness: grosor de la masa; números enteros entre 1 y 10.
+- Uniformity.Size: uniformidad del tamaño de la célula; números enteros entre 1 y 10.
+- Uniformity.Shape: uniformidad de la forma de la célula; números enteros entre 1 y 10.
+- Adhesion: adhesión marginal; números enteros entre 1 y 10.
+- Epithelial.Size: tamaño de la célula epitelial; números enteros entre 1 y 10.
+- Nuclei: nucleo de la célula; números enteros entre 1 y 10.
+- Chromatin: cromatina blanda; números enteros entre 1 y 10.
+- Nucleoli: "nucleoli" normal; números enteros entre 1 y 10.
+- Mitoses: mitosis; números enteros entre 1 y 10.
+- Class: clase de tumor; 2 para benigno y 4 para maligno.
+
+
+## Exploración de los Datos
+
+```{r}
+#librerías utiliadas (puede que necesiten instalar una o más de estas librerías, en ese caso, utilicen install.packages)
+library(caTools)
+library(rpart)
+library(rpart.plot)
+
+#establezca el directorio de trabajo
+setwd("C:/Users/Efren/Desktop/Taller/Taller DS/Taller 1")
+
+#cargue el archivo a una variable que se llame bcw usando la función read.csv
+#usen el parámetro col.names para pasarle un vector con los nombres de las columnas.
+#nombres para las columnas: Sample.number, Thickness, Uniformity.Size, Uniformity.Shape, Adhesion, Epithelial.Size, Nuclei, Chromatin, Nucleoli, Mitoses, Class
+#ejemplo: col.names = c('nombre1', 'nombre2')
+#usen el parámetro na.strings = '?' para que interprete los signos de pregunta como valores faltantes
+bcw <- read.csv('bcw.csv', header = F, col.names = c('Sample.number', 'Thickness', 'Uniformity.Size', 'Uniformity.Shape', 'Adhesion', 'Epithelial.Size', 'Nuclei', 'Chromatin', 'Nucleoli', 'Mitoses', 'Class'), na.strings = '?')
+
+
+```
+
+Luego de cargar los datos, podemos dar un primer vistazo a cómo están estructurados:
+
+```{r}
+#sobreescriban la columna Class con el factor de esa columna
+bcw$Class <- factor(bcw$Class)
+
+#Utilice la función str() para ver la estructura del conjunto de datos:
+str(bcw)
+
+```
+
+En total, el conjunto de datos con el cual se va a trabajar tiene 699 observaciones, de las cuales 458 son tumores benignos (clase = 2) y 241 son malignos (clase = 4), para una proporción de 65.5% benignos y 34.5% malignos.
+
+```{r}
+#utilicen la función table() para generar un resumen de las observaciones en bcw por la variable clase. Deberían ver 458 valores con clase = 2 y 241 con clase = 4
+table(bcw$Class)
+
+#utilicen la tabla generada en el paso anterior para generar un gráfico de barras usando la función barplot(). Recuerden incluir los parámetros main, xlab y ylab para agregar el título y las etiquetas.
+barplot(table(bcw$Class), main = 'Distribución de las clases', ylab = 'Observaciones', xlab = 'Clase')
+```
+
+Para poder entrenar un modelo de minería de datos, necesitamos dividir el conjunto de datos original en dos diferentes: uno de entrenamiento, con el 70% de las observaciones, y uno de prueba con el restante 30%.
+
+```{r}
+#usen la función set.seed para establecer la semilla con el valor 4161
+set.seed(4161)
+
+#las siguientes líneas de código van a crear un vector de valores lógicos
+#este vector lo vamos a utilizar para dividir nuestro conjunto de datos original
+#en dos: uno de entrenamiento para nuestro modelo y uno de prueba.
+#la división se va a hacer con respecto a la columna Class, y vamos a
+#dejar 70% de las  observaciones en el de entrenamiento y 30% en el de prueba.
+
+#paso 1: crear el vector lógico
+splt <- sample.split(bcw$Class, SplitRatio = 0.7)
+
+#paso 2: crear el data frame de entrenamiento usando los valores TRUE del vector splt
+bcw.entrenamiento <- bcw[splt,] #solo las observaciones para las cuales el vector splt es verdadero, y todas las columnas.
+
+#paso 3: crear el data frame de prueba negando los valores de splt, para usar las observaciones que en el paso anterior eran falsas
+bcw.prueba <- bcw[!splt,]
+
+```
+
+Luego de hacer la división, podemos confirmar que no perdimos información y que mantuvimos la proporción del conjunto de datos original:
+
+```{r}
+#Utilicen la función nrow() para demostrar que en total seguimos trabajando con 699 registros aunque ahora tengamos 2 datasets.
+nrow(bcw.entrenamiento) + nrow(bcw.prueba)
+
+table(bcw.entrenamiento$Class)
+
+table(bcw.prueba$Class)
+
+```
+
+El conjunto de datos de entrenamiento tiene 321 tumores benignos y 169 malignos (65.5% - 34.5%), y el conjunto de datos de prueba tiene 137 tumores benignos y 72 malignos (65.5% - 34.5%), para un total de 699 observaciones entre ambos).
+
+```{r}
+#Creen dos gráficos de barra usando barplot(), uno sobre bcw.entrenamiento y otro bcw.prueba para demostrar que se mantiene (o es similar) la proporción de clase = 2 y clase = 4 en los 2 datasets.
+
+barplot(table(bcw.entrenamiento$Class), main = 'Distribución de las clases en bcw.entrenamiento', ylab = 'Observaciones', xlab = 'Clase')
+
+barplot(table(bcw.prueba$Class), main = 'Distribución de las clases en bcw.prueba', ylab = 'Observaciones', xlab = 'Clase')
+
+```
+
+## Modelo de Minería de Datos
+
+A partir de los conjuntos de datos de prueba y entrenamiento, vamos a crear un modelo de minería de datos que utilice un árbol de decisión para clasificar observaciones una de las dos clases: 2 (benigno) o 4 (maligno).
+
+Primero, utilizamos el conjunto de datos de entrenamiento para crear el modelo:
+
+```{r}
+#crear el modelo (esto lo veremos en detalle luego, pero debería haber algunas partes de la sintaxis que ya entiendan)
+modelo.arbol <- rpart(Class ~ ., data = bcw.entrenamiento[,-which(colnames(bcw.entrenamiento) == "Sample.number")], method =  'class')
+```
+
+Una vez creado el modelo, procedemos a hacer las predicciones de las classes en nuestro conjunto de datos de prueba, y almacenamos dichas predicciones en un vector llamado "predicciones".
+
+```{r}
+#predecir utilizando el conjunto de datos de prueba
+predicciones <- predict(modelo.arbol, newdata = bcw.prueba, type = 'class')
+```
+
+## Evaluación
+
+Para evaluar la eficacion del modelo de minería de datos, podemos tabular las predicciones (columnas) con los valores reales del conjunto de prueba (hileras):
+
+```{r}
+#Utilicen la función table() para comparar el resultado de las predicciones con el valor de la columna Class en el conjunto de datos de prueba
+#ejemplo: table(vector1, vector2)
+#el resultado les va a decir cuántas observaciones eran realmente 2 y fueron clasificadas como 2, y cuántas eran 4 y fueron clasificadas como 4
+#también les va a decir cuántas eran 2 y fueron clasificadas como 4, y cuáles eran 4 y fueron clasificadas como 2
+table(bcw.prueba$Class, predicciones)
+
+
+```
+
+En general, podemos sacar las siguientes métricas a partir de la tabulación anterior:
+
+- *Exactitud Total* (observaciones clasificadas apropiadamente) = 93.78% (128 benignos y 68 malignos clasificados correctamente).
+
+- *Especificidad* (porcentaje de negativos verdaderos - en este caso, de las observaciones que realmente son malignas, ¿cuántas clasificó apropiadamente el modelo?) = 94.44% (de las 72 observaciones que son malignas, 68 fueron correctamente identificadas).
+
+- *Sensitividad* (procentaje de positivos verdaderos - de las observaciones que realmente son benignas, ¿cuántas clasificó apropiadamente el modelo?) = 93.42% (de las 137 observaciones que son benignos, 128 fueron correctamente identificadas).
+
+- *Precisión* (de las observaciones que el modelo determinó que eran benignas, ¿cuántas realmente eran benignas?) = 96.97% (de las 132 observaciones que fueron clasificadas como clase 2, 128 sí eran de esa clase).
+
+## Resultados
+
+En general, los resultados del modelo son considerablemente buenos, a pesar de ser un modelo relativamente sencillo. De las observaciones clasificadas, el 94% se hizo apropiadamente. 
+
+Con respecto al tipo de decisiones que se pueden tomar en este caso, la decisión que puede ser más dañina para un paciente es que tenga un tumor maligno y erróneamente se diga que es benigno, pues el paciente podría no recibir tratamiento alguno y eventualmente fallecer. La *especificidad* del modelo es del 94.44%, así que podemos decir que el modelo solo tiene alrededor de un 5% de posibilidades de cometer este error. 
+
+Alternativamente, se le podría decir al paciente que tiene un tumor maligno cuando en realidad el tumor es benigno. En este caso, el paciente podría pasar un mal rato emocionalmente y puede ser sujeto de más pruebas que eventualmente mostrarían la verdad. La *sensitividad* del modelo es del 93.42%, lo cual quiere decir que el modelo tiene cerca de un 7% probabilidad de cometer este error. Asimismo, la *precisión*
+
+La decisión final con respecto a estos números es del negocio, pues no sabemos si dichos márgenes de error son buenos para la industria o si se necesitaría un modelo más exacto que el desarrollado aquí.

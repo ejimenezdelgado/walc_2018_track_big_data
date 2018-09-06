@@ -1,0 +1,49 @@
+---
+title: "Ejercicio1"
+author: "Efrén Jiménez Delgado"
+date: "9 de junio de 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+options(warn=-1)
+assign("last.warning", NULL, envir = baseenv())
+knitr::opts_chunk$set(echo = TRUE,warn=-1)
+```
+
+## Paquetes a usar
+```{r}
+# install.packages("wordcloud",dependencies = TRUE)
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+```
+
+## Se escoje el texto a analizar
+```{r}
+setwd("C:\\Users\\Efren\\Desktop\\ejercicios\\archivos")
+quijote <- suppressWarnings(paste(readLines("quijoteVMac.txt"), collapse=" "))
+```
+## Se genera la matriz de frecuencia de palabras de los textos. Además se usan filtros para "sacar" palabras no destacables
+```{r}
+tmpText <- data.frame(c(quijote))
+ds <- DataframeSource(tmpText)
+corp <- Corpus(ds)
+corp <- tm_map(corp,removePunctuation)
+corp <- tm_map(corp,tolower)
+corp <- tm_map(corp,removeNumbers)
+# Para Textos en español
+corp <- tm_map(corp, removeWords, stopwords("spanish"))
+corp <- tm_map(corp, PlainTextDocument)
+term.matrix <- TermDocumentMatrix(corp)
+term.matrix <- as.matrix(term.matrix)
+term.v <- sort(rowSums(term.matrix),decreasing=TRUE)
+term.d <- data.frame(word = names(term.v),freq=term.v)
+```
+## Se grafica la nube de palabras
+```{r}
+wordcloud(term.d$word,term.d$freq, scale=c(8,.2),min.freq=3, max.words=Inf, random.order=FALSE, rot.per=.15, colors=brewer.pal(8,"Dark2"))
+```
+

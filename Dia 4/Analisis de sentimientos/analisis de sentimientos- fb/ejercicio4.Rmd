@@ -1,0 +1,279 @@
+---
+title: "Ejercicio3"
+author: "Efrén Jiménez Delgado"
+date: "9 de junio de 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+options(warn=-1)
+assign("last.warning", NULL, envir = baseenv())
+knitr::opts_chunk$set(echo = TRUE,warn=-1)
+```
+
+## Paquetes a usar
+```{r}
+# install.packages("Rfacebook",dependencies = TRUE)
+library(Rfacebook)
+library(ggplot2)
+library(date)
+```
+
+## Se autentica en Facebook con un registro previo
+```{r}
+load(path.expand("C:\\Users\\Efren\\Desktop\\ejercicios\\archivos\\fb_oauth"))
+```
+
+## En Tiempo Real extrae los datos de Facebook
+```{r}
+figueres_fb_page <- getPage(page = "Figuerescr", token = fb_oauth, n = Inf, 
+    since = "2016/09/23", until = "2017/06/06", reactions = T)
+save(figueres_fb_page, file = "figueres_fb_page3")
+
+desanti_fb_page <- getPage(page = "alvarezdesanti", token = fb_oauth, n = Inf, 
+    since = "2016/09/23", until = "2017/03/27", reactions = T)
+save(desanti_fb_page, file = "desanti_fb_page3")
+
+gonzalez_fb_page <- getPage(page = "Rogoullo", token = fb_oauth, n = Inf, since = "2016/09/23", 
+    until = "2017/03/27", reactions = T)
+save(gonzalez_fb_page, file = "gonzalez_fb_page3")
+
+aiza_fb_page <- getPage(page = "sigiaiza", token = fb_oauth, n = Inf, since = "2016/09/23", 
+    until = "2017/03/27", reactions = T)
+save(aiza_fb_page, file = "aiza_fb_page3")
+```
+
+## Extrae los datos de Facebook de archivos previamente generados
+```{r}
+load("figueres_fb_page3")
+load("desanti_fb_page3")
+load("gonzalez_fb_page3")
+load("aiza_fb_page3")
+```
+
+## Genera un DataFrame con los datos
+```{r}
+count <- c(nrow(figueres_fb_page), nrow(desanti_fb_page), nrow(gonzalez_fb_page), 
+    nrow(aiza_fb_page))
+order. <- order(count, decreasing = T)
+names <- c("Figueres", "Desanti", "González", "Aiza")
+names <- factor(names, levels = names[order.])
+posts_count <- data.frame(names = names[order.], count = count[order.])
+head(posts_count)
+```
+
+## Genera un Tema en ggplot para darle formato al gráfico
+```{r}
+  prmdt1 <- theme(plot.subtitle = element_text(vjust = 1), 
+    plot.caption = element_text(vjust = 1), 
+    panel.grid.major = element_line(colour = "honeydew4", 
+        size = 0.3, linetype = "blank"), 
+    panel.grid.minor = element_line(colour = "honeydew4", 
+        size = 0.4), axis.text.x = element_text(size = 16), 
+    axis.text.y = element_text(size = 14), 
+    plot.title = element_text(size = 18, hjust = .5), 
+    panel.background = element_rect(fill = "white")) 
+```
+
+## Publicaciones por candidato
+```{r}
+g <- ggplot(posts_count, aes(x = names, y = count, label = count)) + 
+  geom_bar(stat = "identity", fill = "#6bbf47") +
+  geom_text(size = 5, colour = "white",position = position_stack(vjust = 0.5)) +
+  prmdt1 +
+  labs(title = "Cantidad de publicaciones en Facebook", 
+    x = "", y = "", 
+    subtitle = "Realizadas en sus páginas oficiales entre el 23 de septiembre del 2016 y el 27 de marzo del 2017", 
+    caption = "Datos recolectados y analizados por PROMiDAT, fuente de datos Facebook.com")
+```
+
+## Reacciones en el tiempo
+```{r}
+candidate <- c(rep("Figueres", nrow(figueres_fb_page)), rep("Desanti", nrow(desanti_fb_page)), 
+    rep("González", nrow(gonzalez_fb_page)), rep("Aiza", nrow(aiza_fb_page)))
+
+reaction <- figueres_fb_page[, c(2, 6, 10:16)]
+reaction <- rbind(reaction, desanti_fb_page[, c(2, 6, 10:16)])
+reaction <- rbind(reaction, gonzalez_fb_page[, c(2, 6, 10:16)])
+reaction <- rbind(reaction, aiza_fb_page[, c(2, 6, 10:16)])
+reactions_by_candidate <- data.frame(candidate, reaction)
+reactions_by_candidate$created_time <- as_date(reactions_by_candidate$created_time)
+head(reactions_by_candidate)
+
+reactions <- reactions_by_candidate%>% mutate(week = round_date(created_time, 
+    "week")) %>% gather(reaction, count, -candidate, -created_time, -week) %>% 
+    group_by(candidate, week, reaction) %>% summarise(sum_reactions = sum(count)) %>% 
+    ungroup()
+reactions$reaction <- as.factor(reactions$reaction)
+levels(reactions$reaction) <- c("Enojo", "Comentarios", "JaJa", "Likes", "Amor", 
+    "Tristeza", "Compartido", "Sorpresa")
+
+head(reactions, 12)
+
+```
+
+## Genera un Tema en ggplot para darle formato al gráfico
+```{r}
+prmdt2 <- theme(plot.subtitle = element_text(vjust = 1), plot.caption = element_text(vjust = 1), 
+    axis.ticks = element_line(colour = "white"), panel.grid.major = element_line(colour = "honeydew4", 
+        size = 0.1), panel.grid.minor = element_line(colour = "honeydew4", size = 0.1, 
+        linetype = "blank"), axis.title = element_text(colour = NA), axis.text.x = element_text(size = 10), 
+    axis.text.y = element_text(size = 10), plot.title = element_text(size = 16, 
+        hjust = 0.5), legend.text = element_text(size = 10), legend.title = element_text(size = 12), 
+    panel.background = element_rect(fill = "white"), legend.key = element_rect(fill = "white"), 
+    legend.background = element_rect(fill = NA), legend.position = "bottom", 
+    legend.direction = "horizontal")
+
+reactions. <- reactions %>% filter(reaction %in% c("Amor", "Likes", "Compartido"))
+g <- ggplot(reactions., aes(x = week, y = sum_reactions, group = candidate, 
+    colour = fct_reorder2(candidate, week, sum_reactions))) + geom_line() + 
+    facet_wrap(~reaction, scales = "free_y", ncol = 1) + prmdt2 + labs(title = "Reacciones 'positivas' a las publicaciones de los precandidatos", 
+    x = NULL, y = NULL, colour = "Candidato", subtitle = "Realizadas en sus páginas oficiales entre el 23 de septiembre del 2016 y el 27 de marzo del 2017", 
+    caption = "Datos recolectados y analizados por PROMiDAT, fuente de datos Facebook.com") + 
+    scale_x_date(labels = date_format("%B"), date_breaks = "1 month")
+
+
+reactions. <- reactions %>% filter(reaction %in% c("Enojo", "Tristeza"))
+g <- ggplot(reactions., aes(x = week, y = sum_reactions, colour = fct_reorder2(candidate, 
+    week, sum_reactions))) + geom_line() + facet_wrap(~reaction, scales = "free_y", 
+    ncol = 1) + prmdt2 + labs(title = "Reacciones 'negativas' a las publicaciones de los precandidatos", 
+    x = NULL, y = NULL, colour = "Candidato", subtitle = "Realizadas en sus páginas oficiales entre el 23 de septiembre del 2016 y el 23 de marzo del 2017", 
+    caption = "Datos recolectados y analizados por PROMiDAT, fuente de datos Facebook.com") +  scale_x_date(labels = date_format("%B"), date_breaks = "1 month")
+reactions. <- reactions %>% filter(reaction %in% c("Likes","Enojo"))
+reactions. <- reactions. %>% mutate(support = ifelse(reaction %in%c("Likes"),T,F))
+reactions. <- reactions. %>%  mutate(sum_reactions = ifelse(support == T, sum_reactions, -sum_reactions)) 
+reactions. <- reactions. %>% group_by(candidate,week) %>% summarise(sum_reaction = sum(sum_reactions))
+
+g <- ggplot(reactions., aes(x = week, y = sum_reaction, group = candidate)) + 
+    geom_line(color = "#6bbf47") + geom_hline(aes(yintercept = 0), linetype = "dashed", 
+    colour = "honeydew4") + facet_wrap(~candidate, scales = "free_y", ncol = 1) + 
+    prmdt2 + labs(title = "Diferencia entre Likes y Enojo en las publicaciones de \n los precandidatos", 
+    x = NULL, y = NULL, colour = "Reacción", subtitle = "Realizadas en sus páginas oficiales entre el 23 de septiembre del 2016 y el 27 de marzo del 2017", 
+    caption = "Datos recolectados y analizados por PROMiDAT, fuente de datos Facebook.com") + 
+    scale_x_date(labels = date_format("%B"), date_breaks = "1 month")
+
+reactions. <- reactions %>% filter(reaction %in% c("Amor","Enojo"))
+reactions. <- reactions. %>% mutate(support = ifelse(reaction %in%c("Amor"),T,F))
+reactions. <- reactions. %>%  mutate(sum_reactions = ifelse(support == T, sum_reactions, -sum_reactions)) 
+reactions. <- reactions. %>% group_by(candidate,week) %>% summarise(sum_reaction = sum(sum_reactions))
+
+g <- ggplot(reactions., aes(x = week, y = sum_reaction, group = candidate)) + 
+    geom_line(color = "#6bbf47") + geom_hline(aes(yintercept = 0), linetype = "dashed", 
+    colour = "honeydew4") + facet_wrap(~candidate, scales = "free_y", ncol = 1) + 
+    prmdt2 + labs(title = "Diferencia entre Amor y Enojo en las publicaciones de \n los precandidatos", 
+    x = NULL, y = NULL, colour = "Reacción", subtitle = "Realizadas en sus páginas oficiales entre el 23 de septiembre del 2016 y el 27 de marzo del 2017", 
+    caption = "Datos recolectados y analizados por PROMiDAT, fuente de datos Facebook.com") + 
+    scale_x_date(labels = date_format("%B"), date_breaks = "1 month")
+
+```
+
+## Interacciones de los usuarios
+### Datos obtenidos en Tiempo Real
+```{r}
+users_id_figueres <- c()
+for (post_id in figueres_fb_page$id) {
+  post <- getPost(post_id,fb_oauth,comments = T,likes = T, n = Inf)
+  users <- post[[2]]
+  users_id_figueres <- rbind(users_id_figueres,users)
+}
+save(users_id_figueres, file="users_id_figueres3")
+
+users_id_desanti <- c()
+for (post_id in desanti_fb_page$id) {
+  post <- getPost(post_id,fb_oauth,comments = T,likes = T, n = Inf)
+  users <- post[[2]]
+  users_id_desanti <- rbind(users_id_desanti,users)
+}
+save(users_id_desanti, file="users_id_desanti3")
+
+users_id_gonzalez <- c()
+for (post_id in gonzalez_fb_page$id) {
+  post <- getPost(post_id,fb_oauth,comments = T,likes = T, n = Inf)
+  users <- post[[2]]
+  users_id_gonzalez <- rbind(users_id_gonzalez,users)
+}
+save(users_id_gonzalez, file="users_id_gonzalez3")
+
+users_id_aiza<- c()
+for (post_id in aiza_fb_page$id) {
+  post <- getPost(post_id,fb_oauth,comments = T,likes = T, n = Inf)
+  users <- post[[2]]
+  users_id_aiza <- rbind(users_id_aiza,users)
+}
+save(users_id_aiza, file="users_id_aiza3")
+```
+
+### Datos obtenidos en desde un archivo generado previamente
+```{r}
+load("users_id_figueres3")
+load("users_id_desanti3")
+load("users_id_gonzalez3")
+load("users_id_aiza3")
+
+interactions <- data.frame(candidate = c("Figueres","Desanti","González","Aiza"),
+                        count = c(nrow(users_id_figueres),
+                                  nrow(users_id_desanti),
+                                  nrow(users_id_gonzalez),
+                                  nrow(users_id_aiza)))
+
+g <- ggplot(interactions, aes(x = fct_reorder(candidate, count,.desc = T), y = count, label = count)) + 
+  geom_bar(stat = "identity", fill = "#6bbf47") +
+  geom_text(size = 4, colour = "white",position = position_stack(vjust = 0.5)) +
+  prmdt1 +
+  labs(title = "Cantidad de interacciones de los usuarios", 
+    x = "", y = "", 
+    subtitle = "Realizadas en sus páginas oficiales entre el 23 de septiembre del 2016 y el 27 de marzo del 2017", 
+    caption = "Datos recolectados y analizados por PROMiDAT, fuente de datos Facebook.com") + 
+scale_y_continuous(breaks= pretty_breaks())
+
+
+```
+
+### Análisis por Género
+```{r}
+candidate <- c(rep("Figueres",nrow(users_id_figueres)),
+                rep("Desanti",nrow(users_id_desanti)),
+                rep("González",nrow(users_id_gonzalez)),
+               rep("Aiza",nrow(users_id_aiza)))
+
+users_id <- rbind(users_id_figueres, users_id_desanti, users_id_gonzalez, users_id_aiza)
+users_id <- cbind(candidate, users_id)
+names <- data.frame(candidate = users_id$candidate, name = str_extract(users_id$from_name, 
+    "\\w+"), stringsAsFactors = F)
+names. <- as.character(names[!duplicated(names), -1])
+names. <- gender(names.)[, c(1, 4)]
+names. <- inner_join(names, names.)
+genders <- names. %>% group_by(candidate, gender) %>% summarise(count = length(gender)) %>% 
+    ungroup() %>% group_by(candidate) %>% mutate(prop = prop.table(count), diff = prop[1] - 
+    prop[2])
+genders
+```
+
+## Genera un Tema en ggplot para darle formato al gráfico
+```{r}
+prmdt3 <- theme(plot.subtitle = element_text(vjust = 1), 
+    plot.caption = element_text(vjust = 1), 
+    panel.grid.major = element_line(colour = "honeydew4", 
+        size = 0.3, linetype = "blank"), 
+    panel.grid.minor = element_line(colour = "honeydew4", 
+        size = 0.4), axis.text.x = element_text(size = 12), 
+    axis.text.y = element_text(size = 12), 
+    plot.title = element_text(size = 18, hjust = .5), 
+    panel.background = element_rect(fill = "white")) 
+
+g <- ggplot(genders, aes(x = fct_reorder(candidate, diff), y = prop, label = scales::percent(prop), group = gender)) + 
+  geom_bar(stat = "identity", fill = rep(c("#81D4FA","#F48FB1"), 4), color = "white") +
+  geom_text(size = 5, colour = "white", position = position_stack(vjust = 0.5)) +
+  prmdt3 +
+  labs(title = "Distribucción de las interacciones  \n por genero del usuario", 
+    x = "", y = "", 
+    subtitle = "Realizadas en su pagina oficial entre el 23 de septiembre del 2016 y el 27 de marzo del 2017 ", 
+    caption = "Datos recolectados y analizados por PROMiDAT.com, fuente de datos Facebook.com") +
+  scale_y_continuous(labels = scales::percent) +
+  coord_flip()
+
+```
+
+

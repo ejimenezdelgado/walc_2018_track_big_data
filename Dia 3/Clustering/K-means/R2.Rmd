@@ -1,0 +1,223 @@
+---
+title: "Ejercicio 2"
+author: "Efr?n Jim?nez Delgado"
+date: "26 de julio de 2017"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## An?lisis del Problema
+
+El conjunto de datos corresponde a las ventas de un almac?n de ventas al por mayor. Analizar el patr?n de compras de sus clientes, le permitir?a al negocio segmentar sus clientes y preparar promociones o eventos especiales para cada grupo de clientes. 
+
+La ventaja que obtendr?a el negocio al hacer algo as? puede verse reflejada en un incremente en las ventas de los productos que caracterizan a cada uno de los clientes. Asimismo, el negocio podr?a planear mejor la forma en que distribuye su producto, pues si se encuentra un patr?n de consumo alto de un producto que es bajo en las otras zonas o grupos, se puede tomar la decisi?n de enviar mayores cantidades de ese producto a donde hay mayor consumo.
+
+
+## Entendimiento de los Datos
+
+El conjunto de datos contiene las siguientes variables:
+
+- Channel: canal de venta (1 = Horeca - 298 observaciones, 2 = Retail  - 142 observaciones).
+- Region: regi?n en la cual se hizo la venta (1 = Lisboa - 77 observaciones, 2 = Oporto - 47 observaciones, 3 = Otra Regi?on - 316 observaciones).
+- Fresh: cantidad de dinero en producto fresco.
+- Grocery: cantidad de dinero en comestibles.
+- Frozen: cantidad de dinero en alimento congelado.
+- Detergents_Paper: cantidad de dinero en detergente.
+- Delicassen: cantidad de dinero en delicatessen.
+
+## Exploraci?n de los Datos
+
+```{r}
+#librer?as utilizadas
+library(lattice)
+library(reshape2)
+library(ggplot2)
+library(qcc)
+
+#establezca el directorio de trabajo
+setwd("C://Universidad//TEC//2018//I Semestre//Open House//Comunidad//Taller 2")
+
+#cargue el archivo a una variable que se llame ventas usando la funci?n read.csv
+ventas <- read.csv('ventas.csv')
+
+#sobreescriban las columnas Region y Channel con el factor de esa columna
+ventas$Channel <- factor(ventas$Channel)
+ventas$Region <- factor(ventas$Region)
+
+#Utilice la funci?n str() para ver la estructura del conjunto de datos:
+str(ventas)
+
+
+```
+
+La mayor?a de las ventas se registraron en la regi?n #3 (otra regi?n), mientras que la mayor?a de las  ventas se hicieron por medio del canal # 1 (Horeca), tal como se puede apreciar en los siguientes gr?ficos:
+
+```{r}
+barplot(table(ventas$Channel),
+        main = 'Distribuci?n de ventas por canal',
+        xlab = 'canal',
+        ylab = 'cantidad de ventas')
+
+barplot(table(ventas$Region),
+        main = 'Distribuci?n de ventas por canal',
+        xlab = 'regi?n',
+        ylab = 'cantidad de ventas')
+
+
+```
+
+Si analizamos con mayor detalle la variable *Grocery*, su distribuci?n entre las regiones muestra que en todas las regiones la mayor?a de los clientes gastan poco, sin embargo esta proporci?n es mayor en la zona 1 y la zona 3. En la zona 2, cerca de un 50% de las observaciones gastan poco en comestibles, y hay un segundo 'bloque' o subconjunto que gasta m?s comparado con los otros grupos. 
+
+Tambi?n llama la atenci?n que hay un porcentaje de clientes, en la regi?n 2, que gastan bastante en comestibles. Esta proporci?n no se puede apreciar en las otras 2 regiones.
+
+```{r}
+#Utilicen el paquete lattice para crear un solo gr?fico, el cual contenga un histograma de Grocery por valor de la 
+#variable Channel
+
+histogram(~Grocery | Region,
+          data = ventas,
+          main = 'Ventas de Comestibles por regi?n')
+
+```
+
+Al analizar la variable *Delicassen*, se puede observar que hay un patr?n de consumo muy bajo.Este patr?n no sorprender, pues se trata de 'delicadezas'. Sin embargo, s? se puede apreciar una peque?a proporci?n de clientes que gastaron una cantidad significativa en la regi?n #3:
+
+```{r}
+#Utilicen el paquete lattice para crear un solo gr?fico, el cual contenga un histograma de Delicassen por valor de la 
+#variable Channel
+
+histogram(~Delicassen | Region,
+          data = ventas,
+          main = 'Ventas de Delicatessen por regi?n')
+
+```
+
+Al hacer la comparaci?n de ventas por producto en cada uno de los canales, se puede apreciar algunas diferencias entre ellos. Por ejemplo, en el canal #2 hubo mayor consumo de detergentes, comestibles y l?cteos. Con respecto a productos frescos, en el canal #1 parece haber habido mayor consumo, aunque la diferencia no es tan marcada como en lo productos mencionados anteriormente.
+
+```{r}
+#Utilicen el paquete ggplot para crear un solo gr?fico que les permita ver todas las variables cuantitativas en 
+#el contexto de la variable Channel
+#pista: utilicen el paquete reshape2 y la funci?n melt para generar un conjunto de datos agrupable por la columna
+#'variable' y en el eje y la variable 'value'.
+#pista 2: utlicen la variable Channel como la faceta
+#adicionalmente, inviertan los ejes para que las cajas se desplieguen horizontalmente
+bxplt <- ggplot(data = melt(ventas), aes(x= variable, y = value))
+bxplt <- bxplt + geom_boxplot()
+bxplt <- bxplt + facet_wrap(~Channel)
+bxplt <- bxplt + coord_flip()
+bxplt <- bxplt + labs(x = 'producto', y  = 'ventas')
+bxplt <- bxplt + ggtitle('Ventas por producto y por canal')
+bxplt
+
+```
+
+
+## Modelo de Miner?a de Datos
+
+Para agrupar a los clientes con base al consumo, vamos a utilizar solo las variables Fresh, Milk, Grocery, Frozen, Detergents_Paper y Delicassen. En este caso, vamos a intentar agrupar los clientes en 5 grupos diferentes.
+
+```{r}
+#crear el modelo (esto lo veremos en detalle luego, pero deber?a haber algunas partes de la sintaxis que ya entiendan)
+#vamos a agrupar los clientes de acuerdo a las variables cuantitativas.
+#Nota: arbitrariamente se van a crear 5 grupos. La cantidad de cl?steres debe ser mayormente una decisi?n del negocio,
+#para la cual luego veremos como dar recomendaciones.
+modelo.agrupacion <- kmeans(ventas[,c(3:8)], centers = 5)
+
+```
+
+Una vez creado el model, podemos asignar el cl?ster al cual pertenece cada observaci?n al conjunto de datos original.
+
+```{r}
+#predecir utilizando el modelo para agregar una variable nueva llamada 'cluster' al conjunto de datos
+ventas$cluster <- modelo.agrupacion$cluster
+
+#convertir la variable nueva a un factor
+ventas$cluster <- factor(ventas$cluster)
+```
+
+## Evaluaci?n
+
+Al hacer un an?lisis de pareto sobre los grupos creados, se puede apreciar que los grupos #2 y #3 son los que tienen mayor cantidad de clientes asignados: en ellos se agrupa el 74.32%
+
+Estos grupos grandes pueden representar al consumidor promedio, aquellos que no muestran patrones significativamente diferentes a los otros clientes.
+
+```{r}
+#Utilizando el paquete qcc, cree un gr?fico Pareto para ver la distribuci?n de observaciones por cl?ster
+#pista: refi?ranse a la presentaci?n del tema de estad?sticas descriptivas, diapositiva 41
+pareto.chart(table(ventas$cluster),
+             main = 'Cantidad de observaciones por grupo',
+             xlab = 'grupo',
+             ylab = 'observaciones')
+
+```
+
+Las principales caracter?sticas de cada grupo son:
+
+Grupo #1: (2do grupo m?s peque?o)
+
+- Principalmente observaciones de la regi?n 3 y el canal 1.
+- Muy alto consumo de productos frescos.
+- Bajo consumo de leche.
+- Bajo consumo de comestibles.
+- Alto consumo de alimentos congelados.
+- Bajo consumo de detergentes.
+- Bajo consumo de delicassen.
+
+Grupo #2: (2do grupo m?s grande)
+
+- Observaciones principalmente del canal 1 y la regi?n 3.
+- Alto consumo de productos frescos.
+- Bajo consumo de leche.
+- Bajo consumo de comestibles.
+- Bajo consumo de alimentos congelados.
+- Bajo consumo de detergentes.
+- Bajo consumo de delicassen.
+
+Grupo #3: (grupo m?s grande)
+
+- Observaciones principalmente del canal 1 y la regi?n 3.
+- Bajo consumo de productos frescos.
+- Bajo consumo de leche.
+- Muy bajo consumo de comestibles.
+- Muy bajo consumo de alimentos congelados.
+- Bajo consumo de detergentes.
+- Muy bajo consumo de delicassen.
+
+Grupo #4: (grupo m?s peque?o)
+
+- Observaciones principalmente del canal 2 y la regi?n 3.
+- Alto consumo de productos frescos.
+- Muy alto consumo de leche.
+- Muy alto consumo de comestibles.
+- Alto consumo de alimentos congelados.
+- Muy alto consumo de detergentes.
+- Muy alto consumo de delicassen.
+
+Grupo #5:
+
+- Observaciones principalmente del canal 2 y la regi?n 3.
+- Muy bajo consumo de productos frescos.
+- Alto consumo de leche.
+- Alto consumo de comestibles.
+- Muy bajo consumo de alimentos congelados.
+- Alto consumo de detergentes.
+- Bajo consumo de delicassen.
+
+```{r}
+#utilizando la funci?n by, aplique la funci?n summary() al conjunto de datos 'ventas'
+#pista: by(conjunto de datos, columna por la cual dividir, summary)
+by(ventas, ventas$cluster, summary)
+
+```
+
+
+## Resultados
+
+El algoritmo de miner?a de datos utilizado pudo encontrar caracter?sticas muy espec?ficas para dividir a los clientes, y formar grupos interesantes para el negocio. Debido a la gran cantidad de obervaciones de la regi?n 3, esta variable no result? muy importante, pues en todos los grupos hay una mayor?a de observaciones de esta regi?n. Con respecto al canal, sin embargo, se pudieron defininer 3 grupos donde hay m?s que nada observaciones del canal 1 y 2 grupos donde el canal 2 es mayor?a.
+
+Con respecto al consumo de diferentes productos, varios de los  grupos identificados tienen caracter?sticas predominantes, ya sea montos de consumo muy alto o muy bajo, lo cual puede ser muy ?til para el negocio a la hora de pensar en promociones especiales en diferentes tipos de productos (puede ayudar a saber d?nde van a ser m?s efectivas dichas promociones.)
